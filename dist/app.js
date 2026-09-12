@@ -10,17 +10,27 @@ function loadState(){try{const saved=localStorage.getItem(KEY);return saved?rest
 const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
 const toast=message=>{const target=$('toast');target.textContent=message;target.classList.add('show');setTimeout(()=>target.classList.remove('show'),1800)};
 const mutate=change=>{state={...change(state),dirty:true,selectedTake:null};render()};
+let activeDrawer=null;
+function setDrawer(name,open){const drawer=$(name==='style'?'styleDrawer':'coreDrawer');const overlay=$('overlay');activeDrawer=open?name:null;drawer.classList.toggle('open',open);drawer.setAttribute('aria-hidden',String(!open));overlay.hidden=!open;overlay.classList.toggle('open',open);if(open)drawer.querySelector('input,button')?.focus();}
+function closeDrawer(){if(activeDrawer)setDrawer(activeDrawer,false)}
+function renderStyleDrawer(){
+  const influenceMap=new Map((state.styleMix?.influences||[]).map(item=>[item.packId,item.weight]));
+  const rows=STYLE_PACK_LIST.map(pack=>{const weight=influenceMap.get(pack.id)??50;const active=influenceMap.has(pack.id);return `<article class="pack-row ${active?'active':''}" data-drawer-pack-row="${pack.id}"><label class="pack-choice"><input type="checkbox" data-drawer-pack-toggle="${pack.id}" ${active?'checked':''}><span><b>${pack.name}</b><small>${pack.description}</small></span></label><label class="pack-weight">Weight <output>${weight}</output><input type="range" min="1" max="100" value="${weight}" data-drawer-pack-weight="${pack.id}" ${active?'':'disabled'}></label></article>`}).join('');
+  $('styleDrawerBody').innerHTML=`<label class="pack-search"><span>Find a Style Pack</span><input id="drawerPackSearch" type="search" placeholder="Search 15 packs" autocomplete="off"></label><div class="pack-list drawer-pack-list">${rows}</div>`;
+  $('drawerPackSearch').oninput=e=>{const query=e.target.value.toLowerCase();document.querySelectorAll('[data-drawer-pack-row]').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(query))};
+  document.querySelectorAll('[data-drawer-pack-toggle]').forEach(input=>input.onchange=()=>{const id=input.dataset.drawerPackToggle;mutate(current=>{const existing=current.styleMix.influences.filter(item=>item.packId!==id);if(input.checked)existing.push({packId:id,weight:Number(document.querySelector(`[data-drawer-pack-weight="${id}"]`).value)});return {...current,styleMix:{...current.styleMix,influences:existing}}});setDrawer('style',true)});
+  document.querySelectorAll('[data-drawer-pack-weight]').forEach(input=>input.oninput=()=>input.closest('label').querySelector('output').value=input.value);
+  document.querySelectorAll('[data-drawer-pack-weight]').forEach(input=>input.onchange=()=>{const id=input.dataset.drawerPackWeight;mutate(current=>({...current,styleMix:{...current.styleMix,influences:current.styleMix.influences.map(item=>item.packId===id?{...item,weight:Number(input.value)}:item)}}));setDrawer('style',true)});
+}
 
 function renderStyleMix(){
   const influenceMap=new Map((state.styleMix?.influences||[]).map(item=>[item.packId,item.weight]));
-  const rows=STYLE_PACK_LIST.map(pack=>{const weight=influenceMap.get(pack.id)??50;const active=influenceMap.has(pack.id);return `<article class="pack-row ${active?'active':''}" data-pack-row="${pack.id}"><label class="pack-choice"><input type="checkbox" data-pack-toggle="${pack.id}" ${active?'checked':''}><span><b>${pack.name}</b><small>${pack.description}</small></span></label><label class="pack-weight">Weight <output>${weight}</output><input type="range" min="1" max="100" value="${weight}" data-pack-weight="${pack.id}" ${active?'':'disabled'}></label></article>`}).join('');
-  $('stylePanel').innerHTML=`<h2>♧　Style Mix</h2><label class="pack-search"><span>Find a Style Pack</span><input id="packSearch" type="search" placeholder="Search 15 packs" autocomplete="off"></label><div class="pack-list">${rows}</div><label class="strength">Overall influence <output>${Math.round((state.styleMix?.strength??.8)*100)}%</output><input id="styleStrength" type="range" min="0" max="100" value="${Math.round((state.styleMix?.strength??.8)*100)}"></label>`;
-  $('packSearch').oninput=event=>{const query=event.target.value.toLowerCase();document.querySelectorAll('[data-pack-row]').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(query))};
-  document.querySelectorAll('[data-pack-toggle]').forEach(input=>input.onchange=()=>mutate(current=>{const existing=current.styleMix.influences.filter(item=>item.packId!==input.dataset.packToggle);if(input.checked)existing.push({packId:input.dataset.packToggle,weight:Number(document.querySelector(`[data-pack-weight="${input.dataset.packToggle}"]`).value)});return {...current,styleMix:{...current.styleMix,influences:existing}}}));
-  document.querySelectorAll('[data-pack-weight]').forEach(input=>input.oninput=()=>{input.closest('label').querySelector('output').value=input.value});
-  document.querySelectorAll('[data-pack-weight]').forEach(input=>input.onchange=()=>mutate(current=>({...current,styleMix:{...current.styleMix,influences:current.styleMix.influences.map(item=>item.packId===input.dataset.packWeight?{...item,weight:Number(input.value)}:item)}})));
-  $('styleStrength').oninput=event=>event.target.closest('label').querySelector('output').value=`${event.target.value}%`;
-  $('styleStrength').onchange=event=>mutate(current=>({...current,styleMix:{...current.styleMix,strength:Number(event.target.value)/100}}));
+  const order=new Map((state.styleMix?.influences||[]).map((item,index)=>[item.packId,index]));
+  const rows=[...STYLE_PACK_LIST].sort((a,b)=>(order.has(a.id)?order.get(a.id):999)-(order.has(b.id)?order.get(b.id):999)).map(pack=>{const weight=influenceMap.get(pack.id)??50;const active=influenceMap.has(pack.id);return `<article class="pack-row ${active?'active':''}" data-pack-row="${pack.id}"><label class="pack-choice"><input type="checkbox" data-pack-toggle="${pack.id}" ${active?'checked':''}><span><b>${pack.name}</b><small>${pack.description}</small></span></label><label class="pack-weight">Weight <output>${weight}</output><input type="range" min="1" max="100" value="${weight}" data-pack-weight="${pack.id}" ${active?'':'disabled'}></label></article>`}).join('');
+  const selected=(state.styleMix?.influences||[]).map(item=>STYLE_PACK_LIST.find(pack=>pack.id===item.packId)?.name).filter(Boolean);
+  const chips=selected.map(name=>'<span class="mix-chip">'+escape(name)+'</span>').join('');
+  $('stylePanel').innerHTML=`<h2>♧　Style Mix <button class="plus" id="browseStyleBtn" aria-label="Browse Style Packs">＋</button></h2><div class="mix-summary">${selected.length?chips:'<div class="empty-copy">▱<b>No style packs selected</b><span>Choose influences to define your character\'s look.</span></div>'}</div><button class="wide" id="browseStyleBtnBottom">${selected.length?'Edit Style Mix':'Browse Style Packs'}　→</button>`;
+  $('browseStyleBtn').onclick=()=>{renderStyleDrawer();setDrawer('style',true)};$('browseStyleBtnBottom').onclick=()=>{renderStyleDrawer();setDrawer('style',true)};
 }
 
 function render(){
@@ -69,12 +79,15 @@ function hydrate(){
   document.querySelector('.expression .dependent:nth-child(1)').innerHTML=`<h2>♙　Appearance <button class="edit-link" id="characterEdit">Edit Core</button></h2><div class="field-grid"><span>Hair<br/><b>${escape(appearance.hair.colour)}, ${escape(appearance.hair.style)}</b></span><span>Skin<br/><b>${escape(appearance.skinDetails.join(', '))}</b></span></div>`;
   document.querySelector('.expression .dependent:nth-child(2)').innerHTML=`<h2>♧　Wardrobe <button class="edit-link" id="wardrobeEdit">Manual</button></h2><div class="control-summary">${escape(state.wardrobe.items.join(' · ')||'Resolved from Style Mix')}</div><label class="lock-control"><input id="wardrobeLock" type="checkbox" ${state.wardrobe.locked?'checked':''}> Lock manual wardrobe</label>`;
   document.querySelector('.expression .dependent:nth-child(3)').innerHTML=`<h2>▣　Photography</h2><div>${escape(state.visualSettings.photography.shotType)} · ${escape(state.visualSettings.photography.lens)}</div>`;
-  $('characterEdit').onclick=()=>{const name=prompt('Character name',state.character.name);if(name)state=editCharacter(state,{name});render()};
+  $('characterEdit').onclick=()=>{const character=state.character;const form=$('coreForm');form.name.value=character.name;form.age.value=character.identity.age;form.location.value=character.identity.location;form.occupation.value=character.identity.occupation;setDrawer('core',true)};
   $('wardrobeEdit').onclick=()=>{const value=prompt('Manual wardrobe items, separated by commas',state.wardrobe.items.join(', '));if(value!==null)mutate(current=>({...current,wardrobe:{...current.wardrobe,source:'manual',items:value.split(',').map(item=>item.trim()).filter(Boolean)}}))};
   $('wardrobeLock').onchange=event=>mutate(current=>({...current,wardrobe:{...current.wardrobe,locked:event.target.checked}}));
 }
 
 function bind(){
+  document.querySelectorAll('[data-close-drawer]').forEach(button=>button.onclick=closeDrawer);$('overlay').onclick=closeDrawer;
+  $('coreForm').onsubmit=event=>{event.preventDefault();const data=new FormData(event.currentTarget);state=editCharacter(state,{name:String(data.get('name')).trim(),age:Number(data.get('age')),location:String(data.get('location')).trim(),occupation:String(data.get('occupation')).trim()});closeDrawer();render();toast('Character Core saved')};
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')closeDrawer()},{once:true});
   document.querySelectorAll('[data-workspace]').forEach(button=>button.onclick=()=>{activeWorkspace=button.dataset.workspace;localStorage.setItem('promptforge-workspace',activeWorkspace);render()});
   $('createBtn')?.addEventListener('click',()=>{const name=prompt('Character name','Maya');if(name)state=createCharacter(state,{name});render()});
   $('surpriseBtn')?.addEventListener('click',()=>{state=createCharacter(state,{name:'Nova'});render()});
@@ -93,4 +106,3 @@ function inspect(){if(!state.character){toast('Create a Character Core before re
 function compile(){if(!state.character){toast('Create a Character Core before compiling');return}try{state=compilePrompt(state,MockCompiler);const consolePanel=$('console');consolePanel.classList.remove('hidden');consolePanel.innerHTML='✓ Character Core preserved<br/>✓ Style Mix normalized and resolved<br/>✓ Context compatibility scored<br/>✓ Locks and overrides applied<br/><br/>✨ Resolver output forwarded to MockCompiler<br/>✓ Master Director Prompt ready';render();inspect()}catch(error){toast(error.message)}}
 function take(){try{state=createTake(state);render();toast('Immutable Take created')}catch(error){toast(error.message)}}
 render();
-
