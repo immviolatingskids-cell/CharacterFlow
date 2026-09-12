@@ -6,6 +6,7 @@ const $=id=>document.getElementById(id);
 const escape=value=>String(value).replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 let state=loadState();
 let activeWorkspace=localStorage.getItem('promptforge-workspace')||'create';
+if(activeWorkspace==='style-packs')activeWorkspace='create';
 function loadState(){try{const saved=localStorage.getItem(KEY);return saved?restoreState(saved):blankState()}catch{return blankState()}}
 const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
 const toast=message=>{const target=$('toast');target.textContent=message;target.classList.add('show');setTimeout(()=>target.classList.remove('show'),1800)};
@@ -90,7 +91,7 @@ function bind(){
   $('coreReferenceBtn').onclick=()=>{state=addReference(state);$('coreReferenceStatus').textContent=`${state.character.references.length} reference${state.character.references.length===1?'':'s'} attached`;toast('Reference attached')};
   $('coreForm').onsubmit=event=>{event.preventDefault();const data=new FormData(event.currentTarget);const list=name=>String(data.get(name)||'').split(',').map(item=>item.trim()).filter(Boolean);const next=editCharacter(state,{name:String(data.get('name')).trim(),age:Number(data.get('age')),location:String(data.get('location')).trim(),occupation:String(data.get('occupation')).trim()});state={...next,character:{...next.character,personality:{...next.character.personality,traits:list('traits')},interests:list('interests')},interestState:{...next.interestState,characterInterests:list('interests')}};closeDrawer();render();toast('Character Core saved')};
   document.addEventListener('keydown',event=>{if(event.key==='Escape')closeDrawer()},{once:true});
-  document.querySelectorAll('[data-workspace]').forEach(button=>button.onclick=()=>{activeWorkspace=button.dataset.workspace;localStorage.setItem('promptforge-workspace',activeWorkspace);render()});
+  document.querySelectorAll('[data-workspace]').forEach(button=>button.onclick=()=>{if(button.dataset.workspace==='style-packs'){activeWorkspace='create';localStorage.setItem('promptforge-workspace','create');render();renderStyleDrawer();setDrawer('style',true);return}activeWorkspace=button.dataset.workspace;localStorage.setItem('promptforge-workspace',activeWorkspace);render()});
   $('createBtn')?.addEventListener('click',()=>{const name=prompt('Character name','Maya');if(name)state=createCharacter(state,{name});render()});
   $('surpriseBtn')?.addEventListener('click',()=>{state=createCharacter(state,{name:'Nova'});render()});
   $('compileBtn').onclick=compile;$('generateBtn').onclick=compile;$('inspectBtn').onclick=inspect;
