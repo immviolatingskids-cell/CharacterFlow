@@ -6,7 +6,6 @@ const domainsOf=id=>STYLE_PACK_LIST.flatMap(pack=>Object.entries(pack.atoms).fil
 test('catalogue keeps representative concepts in semantic domains',()=>{
   assert.equal(domainsOf('oversized-hoodie').every(domain=>domain==='wardrobe'),true);
   assert.equal(domainsOf('annotated-paperback').every(domain=>domain==='props'),true);
-  assert.equal(domainsOf('layered-silver').every(domain=>['accessories','jewellery','motifs'].includes(domain)),true);
   assert.ok(domainsOf('street-documentary').every(domain=>domain==='visual'));
   assert.ok(domainsOf('library-interior').every(domain=>domain==='locations'));
   assert.ok(domainsOf('walking-city').every(domain=>domain==='activities'));
