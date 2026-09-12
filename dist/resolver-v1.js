@@ -66,4 +66,3 @@ export function resolveStyleState(state,seed='promptforge-default',registry=STYL
   if(JSON.stringify(state.character)!==characterBefore)throw new Error('Resolver attempted to mutate Character Core');
   return {resolver:{name:'PromptForge Resolver',version:'1.1',seed:String(seed),strategy:'bounded-context-independent-ranking-strength-authority'},character:clone(state.character),styleMix:{strength:styleStrength,normalizedInfluences:normalizedMix},context:{scene:clone(state.scene||null),activeContext:clone(state.interestState?.activeContext||[]),wardrobe:clone(state.wardrobe||null),visualSettings:clone(state.visualSettings||null)},resolved,provenance:{categories}};
 }
-
