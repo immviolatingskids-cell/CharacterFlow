@@ -1,0 +1,6 @@
+{
+  "name": "promptforge-studio",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test tests/studio-core.test.mjs" }
+}
