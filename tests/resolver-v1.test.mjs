@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {blankState,createCharacter,resolveStudioState,compilePrompt,MockCompiler} from '../studio-core.js';
+import {normalizeStyleMix} from '../resolver-v1.js';
 
 const withMix=(mix=[['tech-girlie',50],['streetwear',50]],scene=null)=>{let state=createCharacter(blankState(),{name:'Maya'});state={...state,styleMix:{...state.styleMix,influences:mix.map(([packId,weight])=>({packId,weight}))},scene};return state};
 const candidate=(resolution,category,id)=>resolution.provenance.categories[category].candidates.find(item=>item.id===id);
@@ -24,3 +25,9 @@ test('manual and locked wardrobe overrides are respected',()=>{let state=withMix
 test('provenance identifies contributing packs and contextual adjustments',()=>{const state=withMix([['tech-girlie',50],['booktok',50]],{id:'cafe',tags:['cafe','indoor']});const resolved=resolveStudioState(state,{seed:'provenance'});const laptop=candidate(resolved,'props','slim-laptop');const mug=candidate(resolved,'props','ceramic-mug');assert.equal(laptop.contributions[0].packName,'Tech Girlie');assert.equal(mug.contributions[0].packName,'Booktok');assert.ok(laptop.adjustments.length);assert.ok(mug.adjustments.length)});
 
 test('resolver output is serializable, persistent, and compiler-ready',()=>{const state=withMix([['tech-girlie',40],['streetwear',35],['booktok',25]]);const resolved=resolveStudioState(state,{seed:'persist'});assert.deepEqual(JSON.parse(JSON.stringify(resolved)),resolved);const compiled=compilePrompt({...state,generationOptions:{seed:'persist'}},MockCompiler);assert.deepEqual(compiled.lastPrompt.sourceState,resolved);assert.match(compiled.lastPrompt.text,/Preserve canonical identity/)});
+
+test('normalization merges duplicate packs and rejects non-finite weights',()=>{const normalized=normalizeStyleMix([{packId:'tech-girlie',weight:20},{packId:'tech-girlie',weight:30},{packId:'streetwear',weight:Infinity},{packId:'booktok',weight:-1},{packId:'missing',weight:100}]);assert.deepEqual(normalized.map(item=>item.packId),['tech-girlie']);assert.equal(normalized[0].weight,50);assert.equal(normalized[0].normalizedWeight,1)});
+
+test('overall strength is bounded and changes score contrast',()=>{const state=withMix([['tech-girlie',70],['streetwear',30]]);const low=resolveStudioState({...state,styleMix:{...state.styleMix,strength:.25}},{seed:'strength'});const high=resolveStudioState({...state,styleMix:{...state.styleMix,strength:1}},{seed:'strength'});const lowGap=Math.abs(candidate(low,'wardrobe','oversized-blazer').score-candidate(low,'wardrobe','utility-cargo').score);const highGap=Math.abs(candidate(high,'wardrobe','oversized-blazer').score-candidate(high,'wardrobe','utility-cargo').score);assert.ok(highGap>lowGap);const zero=resolveStudioState({...state,styleMix:{...state.styleMix,strength:0}},{seed:'strength'});assert.equal(zero.resolved.wardrobe,null);assert.equal(zero.styleMix.strength,0)});
+
+test('seed jitter remains bounded so context cannot dominate pack support',()=>{const state=withMix([['tech-girlie',99],['streetwear',1]],{id:'cafe',tags:['cafe']});const resolved=resolveStudioState(state,{seed:'bounds'});for(const category of Object.values(resolved.provenance.categories))for(const item of category.candidates){assert.ok(item.seedFactor>=.95&&item.seedFactor<=1.05);for(const contribution of item.contributions)assert.ok(contribution.compatibilityMultiplier>=.8&&contribution.compatibilityMultiplier<=1.25)}});

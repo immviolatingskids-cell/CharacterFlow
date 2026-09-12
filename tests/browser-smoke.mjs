@@ -28,13 +28,13 @@ try{
   let sequence=0;const pending=new Map();const exceptions=[];
   socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id&&pending.has(message.id)){const {resolve,reject}=pending.get(message.id);pending.delete(message.id);message.error?reject(new Error(message.error.message)):resolve(message.result)}if(message.method==='Runtime.exceptionThrown')exceptions.push(message.params.exceptionDetails.text)});
   const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))});
-  await command('Runtime.enable');await command('Page.enable');await wait(900);
-  const evaluate=async expression=>(await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true})).result.value;
+  await command('Runtime.enable');await command('Page.enable');await wait(1800);
+  const evaluate=async expression=>{const response=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(response.exceptionDetails)throw new Error(response.exceptionDetails.text||'browser evaluation failed');return response.result.value};
   await evaluate("localStorage.clear();window.prompt=()=> 'Maya';document.getElementById('surpriseBtn').click()");await wait(150);
   await evaluate("document.querySelector('[data-pack-toggle=\"tech-girlie\"]').click()");
   await evaluate("document.querySelector('[data-pack-toggle=\"streetwear\"]').click()");
   await evaluate("document.querySelector('[data-pack-toggle=\"booktok\"]').click()");
-  await evaluate("document.getElementById('sceneBtn').click();document.getElementById('inspectBtn').click()");await wait(150);
+  await evaluate("document.getElementById('sceneBtn').click();document.getElementById('inspectBtn').click()");await wait(300);
   const result=await evaluate("(()=>{const parsed=JSON.parse(document.getElementById('inspectorOutput').textContent);return {title:document.title,character:document.getElementById('studioTitle').textContent,activePacks:[...document.querySelectorAll('.pack-row.active b')].map(node=>node.textContent),scene:document.getElementById('sceneText').textContent,inspectorVisible:!document.getElementById('inspector').classList.contains('hidden'),resolverVersion:parsed.resolver.version,normalizedMix:parsed.normalizedMix,resolvedCategories:Object.keys(parsed.resolved),provenanceCategories:Object.keys(parsed.provenance)}})()");
   await evaluate("document.getElementById('compileBtn').click()");await wait(100);
   result.compilerStatus=await evaluate("document.getElementById('console').textContent");
