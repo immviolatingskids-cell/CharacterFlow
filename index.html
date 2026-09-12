@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PromptForge Studio</title>
+  <title>PromptForge Studio</title><meta name="description" content="Build characters, shape their worlds, and compile visual direction in PromptForge Studio."><meta name="theme-color" content="#0b1421"><link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -18,5 +18,5 @@
       <section class="director panel"><div class="director-head"><h2>↗　DIRECTOR / API</h2><span>Compiler and export controls</span><button id="compileBtn" class="primary">Compile Prompt</button></div><div class="controls"><label>Provider<select><option>Mock Compiler</option><option>Google Gemini (adapter)</option></select></label><label>Model<select><option>Studio Baseline</option></select></label><label>Profile<select><option>Photoreal Director</option></select></label><label>Temperature<input type="range" value="30"/></label><label>Output<select><option>Text Prompt</option></select></label></div><div id="console" class="console hidden"></div></section>
       <section class="takes panel"><h2>▧　Takes <span id="takeCount">0</span></h2><div id="takesEmpty" class="takes-empty">▧<b>Your generations will appear here.</b><span>Create a character and compile your first take to get started.</span></div><div id="takesList" class="takes-list"></div></section>
     </section>
-  </main><script src="app.js"></script>
+  </main><script src="app.js"></script><script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');</script>
 </body></html>
