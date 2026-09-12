@@ -12,6 +12,9 @@ const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
 const toast=message=>{const target=$('toast');target.textContent=message;target.classList.add('show');setTimeout(()=>target.classList.remove('show'),1800)};
 const mutate=change=>{state={...change(state),dirty:true,selectedTake:null};render()};
 let activeDrawer=null;
+const SCENE_OPTIONS=[{id:'cafe',name:'Café',location:'warm indoor coffee shop',activity:'conversation'},{id:'street',name:'City Street',location:'downtown city street',activity:'walking'},{id:'library',name:'Library',location:'quiet library interior',activity:'reading'}];
+function ensureSceneDrawer(){if($('sceneDrawer'))return;document.body.insertAdjacentHTML('beforeend','<aside id="sceneDrawer" class="drawer" aria-hidden="true" aria-labelledby="sceneDrawerTitle"><button class="drawer-close" data-close-drawer aria-label="Close Scenes">×</button><div class="eyebrow">SCENE LIBRARY</div><h2 id="sceneDrawerTitle">Place the character</h2><p class="drawer-intro">Choose a setting and activity without leaving the Studio canvas.</p><div id="sceneDrawerBody" class="scene-options"></div></aside>')}
+function renderSceneDrawer(){ensureSceneDrawer();$('sceneDrawerBody').innerHTML=SCENE_OPTIONS.map(scene=>`<button class="scene-option ${state.scene?.id===scene.id?'selected':''}" data-scene-id="${scene.id}"><b>${scene.name}</b><span>${scene.location}</span><small>${scene.activity}</small></button>`).join('')+'<button class="scene-option clear-scene" data-scene-id="clear"><b>No scene</b><span>Return to an unplaced character</span></button>';document.querySelectorAll('[data-scene-id]').forEach(button=>button.onclick=()=>{const id=button.dataset.sceneId;mutate(current=>({...current,scene:id==='clear'?null:SCENE_OPTIONS.find(scene=>scene.id===id)}));closeDrawer();toast(id==='clear'?'Scene cleared':'Scene selected')})}
 function setDrawer(name,open){const drawer=$(name+'Drawer');const overlay=$('overlay');activeDrawer=open?name:null;drawer.classList.toggle('open',open);drawer.setAttribute('aria-hidden',String(!open));drawer.toggleAttribute('aria-modal',open);overlay.hidden=!open;overlay.classList.toggle('open',open);document.body.classList.toggle('drawer-open',open);if(open)drawer.querySelector('input,button,textarea')?.focus();}
 function closeDrawer(){if(activeDrawer)setDrawer(activeDrawer,false)}
 function renderStyleDrawer(){
@@ -87,6 +90,7 @@ function hydrate(){
 }
 
 function bind(){
+  ensureSceneDrawer();
   document.querySelectorAll('[data-close-drawer]').forEach(button=>button.onclick=closeDrawer);$('overlay').onclick=closeDrawer;
   $('coreReferenceBtn').onclick=()=>{state=addReference(state);$('coreReferenceStatus').textContent=`${state.character.references.length} reference${state.character.references.length===1?'':'s'} attached`;toast('Reference attached')};
   $('wardrobeForm').onsubmit=event=>{event.preventDefault();const data=new FormData(event.currentTarget);const items=String(data.get('items')||'').split(',').map(item=>item.trim()).filter(Boolean);mutate(current=>({...current,wardrobe:{...current.wardrobe,source:'manual',items,locked:data.get('locked')==='on'}}));closeDrawer();toast('Wardrobe saved')};
@@ -99,7 +103,7 @@ function bind(){
   $('seedInput').value=state.generationOptions?.seed||'promptforge-1';
   $('seedInput').onchange=event=>mutate(current=>({...current,generationOptions:{...current.generationOptions,seed:event.target.value||'promptforge-1'}}));
   $('interestBtn').onclick=()=>mutate(current=>({...current,interestState:{...current.interestState,characterInterests:current.interestState.characterInterests.length?[]:['programming','photography']}}));
-  $('sceneBtn').onclick=()=>mutate(current=>{const scenes=[{id:'cafe',name:'Café',location:'warm indoor coffee shop',activity:'conversation',tags:['cafe','indoor']},{id:'street',name:'City Street',location:'downtown city street',activity:'walking',tags:['street','city','outdoor']},{id:'library',name:'Library',location:'quiet library interior',activity:'reading',tags:['library','indoor','reading']},null];const index=scenes.findIndex(scene=>scene?.id===current.scene?.id);return {...current,scene:scenes[(index+1)%scenes.length]};});
+  $('sceneBtn').onclick=()=>{renderSceneDrawer();setDrawer('scene',true)};
   document.querySelectorAll('[data-take]').forEach(button=>button.onclick=()=>{state=promoteTake(state,button.dataset.take);render()});
 }
 
