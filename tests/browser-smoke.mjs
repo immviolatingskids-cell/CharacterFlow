@@ -39,7 +39,7 @@ try{
   await evaluate("document.getElementById('compileBtn').click()");await wait(100);
   result.compilerStatus=await evaluate("document.getElementById('console').textContent");
   result.screenshot=(await command('Page.captureScreenshot',{format:'png'})).data.length>1000;
-  assert.equal(exceptions.length,0);assert.match(result.character,/Nova/);assert.deepEqual(result.activePacks,['Tech Girlie','Streetwear','Booktok']);assert.equal(result.scene,'Café');assert.equal(result.inspectorVisible,true);assert.equal(result.resolverVersion,1);assert.equal(result.normalizedMix.length,3);assert.equal(result.resolvedCategories.length,7);assert.equal(result.provenanceCategories.length,7);assert.match(result.compilerStatus,/MockCompiler/);assert.equal(result.screenshot,true);
+  assert.equal(exceptions.length,0);assert.match(result.character,/Nova/);assert.deepEqual(result.activePacks,['Tech Girlie','Streetwear','Booktok']);assert.equal(result.scene,'Café');assert.equal(result.inspectorVisible,true);assert.equal(result.resolverVersion,'1.1');assert.equal(result.normalizedMix.length,3);assert.equal(result.resolvedCategories.length,7);assert.equal(result.provenanceCategories.length,7);assert.match(result.compilerStatus,/MockCompiler/);assert.equal(result.screenshot,true);
   console.log(JSON.stringify(result,null,2));
 }finally{
   socket?.close();browser.kill();await Promise.race([once(browser,'exit'),wait(2000)]);server.close();
