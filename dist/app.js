@@ -93,3 +93,4 @@ function inspect(){if(!state.character){toast('Create a Character Core before re
 function compile(){if(!state.character){toast('Create a Character Core before compiling');return}try{state=compilePrompt(state,MockCompiler);const consolePanel=$('console');consolePanel.classList.remove('hidden');consolePanel.innerHTML='✓ Character Core preserved<br/>✓ Style Mix normalized and resolved<br/>✓ Context compatibility scored<br/>✓ Locks and overrides applied<br/><br/>✨ Resolver output forwarded to MockCompiler<br/>✓ Master Director Prompt ready';render();inspect()}catch(error){toast(error.message)}}
 function take(){try{state=createTake(state);render();toast('Immutable Take created')}catch(error){toast(error.message)}}
 render();
+
