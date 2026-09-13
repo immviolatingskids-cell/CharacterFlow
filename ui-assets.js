@@ -21,3 +21,4 @@ export function sceneGlyph(id){return GLYPHS[id]||'⌖'}
 export function editorialNote(text,variant='arrow'){
   return `<p class="editorial-note note-${safe(variant)}" aria-hidden="true">${safe(text)}</p>`;
 }
+

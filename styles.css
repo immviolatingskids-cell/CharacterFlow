@@ -60,3 +60,4 @@ html[data-page-hidden] *{animation-play-state:paused!important}
 @media(max-width:480px){.library-head-actions{display:grid}.library-category{min-width:170px}.library-browser-head{padding:17px}.library-family{min-height:148px}.gemini-foundation{grid-template-columns:1fr}.detail-tabs{gap:12px;overflow:auto}.library-head h1{font-size:32px}}
 .stage-art button{font-size:14px!important;line-height:1.2}.stage-art>small{display:block;margin-top:10px;color:#7f8da1;font:10px/1.4 var(--type-ui)}.stage-actions button{padding:9px 12px}
 .expression-direction{display:grid;gap:4px;margin-top:10px;padding-top:9px;border-top:1px solid #2f4056;color:#d8dfeb}.expression-direction small{color:#8f9eb2;font-size:10px;text-transform:uppercase;letter-spacing:1px}.expression-direction b{font-size:12px;font-weight:500}
+
