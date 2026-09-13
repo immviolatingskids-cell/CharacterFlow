@@ -8,7 +8,7 @@ import {ICON_REGISTRY,ICON_SEMANTIC_COUNT} from '../icon-registry.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const assets=['maya-cafe-portrait.png','scene-cafe.png','scene-street.png','scene-forest.png','wardrobe-capsule.png'];
 
-test('active-character bitmap assets exist in source and publishable dist',()=>{
+test('legacy bitmap assets remain available only as optional demo fixtures',()=>{
   for(const asset of assets){
     const source=path.join(root,'assets',asset);
     const published=path.join(root,'dist','assets',asset);
@@ -29,14 +29,14 @@ test('Solar registry is curated, semantic, and locally backed',()=>{
   }
 });
 
-test('active-character visual surfaces remain image-backed',()=>{
+test('active-character visual surfaces are semantic and reference-driven',()=>{
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  assert.match(app,/MAYA_PORTRAIT='assets\/maya-cafe-portrait\.png'/);
-  assert.match(app,/createTake\(state,kind,MAYA_PORTRAIT\)/);
-  assert.match(app,/sceneImage\(state\.scene\.id\)/);
-  assert.match(app,/WARDROBE_THUMBNAIL/);
-  assert.match(app,/take\.image\|\|sceneImage/);
-  assert.match(app,/scene-thumb.*<img/);
+  assert.doesNotMatch(app,/MAYA_PORTRAIT|sceneImage|WARDROBE_THUMBNAIL/);
+  assert.match(app,/createTake\(state,kind\)/);
+  assert.match(app,/SCENE_ICONS/);
+  assert.match(app,/icon\('apparel'/);
+  assert.match(app,/character\.references/);
+  assert.doesNotMatch(app,/find\(char=>.*⌂/);
 });
 
 test('command palette owns its close control and scroll boundary',()=>{
@@ -46,4 +46,17 @@ test('command palette owns its close control and scroll boundary',()=>{
   assert.match(app,/commandClose.*closeCommand/);
   assert.match(css,/command-shell\{position:relative;box-sizing:border-box;overflow:hidden/);
   assert.match(css,/command-results\{min-height:0;max-height:min\(430px,calc\(78vh - 206px\)\);overflow-y:auto/);
+});
+
+test('workspace navigation keeps Style Packs as a first-class destination',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'audit-overrides.css'),'utf8');
+  assert.match(app,/'style-packs':\['Style Packs'/);
+  assert.match(app,/button\.onclick=\(\)=>goWorkspace\(button\.dataset\.workspace\)/);
+  assert.match(css,/\.topbar\{gap:clamp\(18px,4vw,54px\)/);
+});
+
+test('image actions expose distinct accessible semantics',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(app,/button\.id==='imageMoreBtn'\?'More image actions':'Open reference image'/);
 });
