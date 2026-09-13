@@ -26,3 +26,12 @@ test('active-character visual surfaces remain image-backed',()=>{
   assert.match(app,/take\.image\|\|sceneImage/);
   assert.match(app,/scene-thumb.*<img/);
 });
+
+test('command palette owns its close control and scroll boundary',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'audit-overrides.css'),'utf8');
+  assert.match(app,/commandClose/);
+  assert.match(app,/commandClose.*closeCommand/);
+  assert.match(css,/command-shell\{position:relative;box-sizing:border-box;overflow:hidden/);
+  assert.match(css,/command-results\{min-height:0;max-height:min\(430px,calc\(78vh - 206px\)\);overflow-y:auto/);
+});
