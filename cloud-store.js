@@ -84,10 +84,8 @@ export function createCloudStore({ client = null, local = globalThis.localStorag
       requireUser(userId);
       const state = typeof serializedState === 'string' ? JSON.parse(serializedState) : serializedState;
       if (!client) { localWrite(state); return { mode: 'local', migrated: false }; }
-      if (state.character) await this.saveCharacter(state, userId);
-      for (const take of state.takes || []) await this.saveTake(take, userId);
-      for (const prompt of state.compiledPrompts || []) await this.savePrompt(prompt, userId);
-      return { mode: 'cloud', migrated: true };
+      const result = await syncState(this, state, client);
+      return { ...result, migrated: result.synced === true };
     },
     async getSummary(userId) {
       requireUser(userId);
