@@ -1,9 +1,5 @@
 const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
-export const GLYPHS=Object.freeze({
-  cafe:'☕',street:'⌁',library:'▤',bedroom:'⌂',office:'▦',forest:'♧',beach:'≈',nightlife:'✦',campus:'⌂',studio:'◫',fantasy:'✧','sci-fi':'◉'
-});
-
 export function forgeOrbital(state='idle',label='Forge idle'){
   return `<div class="forge-orbital" data-forge-state="${safe(state)}" role="img" aria-label="${safe(label)}">
     <svg viewBox="0 0 180 180" aria-hidden="true">
@@ -15,8 +11,6 @@ export function forgeOrbital(state='idle',label='Forge idle'){
     </svg>
   </div>`;
 }
-
-export function sceneGlyph(id){return GLYPHS[id]||'⌖'}
 
 export function editorialNote(text,variant='arrow'){
   return `<p class="editorial-note note-${safe(variant)}" aria-hidden="true">${safe(text)}</p>`;
