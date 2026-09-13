@@ -21,7 +21,12 @@ export async function syncState(store, state, client) {
   if (!store || store.mode === 'local' || !client) return { mode: 'local', synced: false };
   const user = await currentUser(client);
   if (!user) return { mode: 'cloud', synced: false, reason: 'authentication-required' };
-  if (state.character) await store.saveCharacter(state, user.id);
+  const characters=Array.isArray(state.characters)&&state.characters.length?state.characters:(state.character?[state.character]:[]);
+  const existingCharacters=await client.from('characters').select('id').eq('user_id', user.id);
+  if (existingCharacters.error) throw existingCharacters.error;
+  const wanted=new Set(characters.map(character=>character.id));
+  for (const row of existingCharacters.data||[]) if(!wanted.has(row.id)) await store.deleteCharacter(row.id,user.id);
+  for (const character of characters) await store.saveCharacter({...state,character,activeCharacterId:character.id,characters}, user.id);
   const [promptRows, takeRows] = await Promise.all([
     client.from('compiled_prompts').select('id').eq('user_id', user.id),
     client.from('takes').select('id').eq('user_id', user.id)
@@ -46,15 +51,28 @@ export function createCloudStore({ client = null, local = globalThis.localStorag
     mode: client ? 'cloud' : 'local',
     async load() {
       if (!client) return localRead();
-      const { data, error } = await client.from('characters').select('state').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      const { data, error } = await client.from('characters').select('id,revision,name,state,updated_at').order('updated_at', { ascending: false });
       if (error) throw error;
-      return data?.state ? JSON.stringify(data.state) : null;
+      if (!data?.length) return null;
+      const latest=data[0].state||{};
+      const characters=data.map(row=>row.state?.character||{id:row.id,revision:row.revision,name:row.name});
+      const [takeRows,promptRows]=await Promise.all([client.from('takes').select('*'),client.from('compiled_prompts').select('*')]);
+      if (takeRows.error) throw takeRows.error;
+      if (promptRows.error) throw promptRows.error;
+      return JSON.stringify({...latest,characters,character:characters.find(item=>item.id===latest.activeCharacterId)||characters[0],activeCharacterId:latest.activeCharacterId||characters[0]?.id,takes:takeRows.data||latest.takes||[],compiledPrompts:promptRows.data||latest.compiledPrompts||[]});
     },
     async saveCharacter(state, userId) {
       if (!client) { local?.setItem(localKey, JSON.stringify(state)); return { mode: 'local' }; }
       const character = state.character;
       if (!character || !userId) throw new Error('Character and authenticated user are required');
       const { error } = await client.from('characters').upsert({ user_id: userId, id: character.id, revision: character.revision, name: character.name, state });
+      if (error) throw error;
+      return { mode: 'cloud' };
+    },
+    async deleteCharacter(characterId,userId) {
+      requireUser(userId);
+      if (!client) return { mode: 'local' };
+      const { error } = await client.from('characters').delete().eq('user_id',userId).eq('id',characterId);
       if (error) throw error;
       return { mode: 'cloud' };
     },
@@ -91,7 +109,7 @@ export function createCloudStore({ client = null, local = globalThis.localStorag
       requireUser(userId);
       if (!client) {
         const state = JSON.parse(localRead() || '{}');
-        return { profile: null, characters: state.character ? 1 : 0, takes: state.takes?.length || 0, prompts: state.compiledPrompts?.length || 0, projects: 0, favorites: 0, recentTakes: state.takes || [] };
+        return { profile: null, characters: state.characters?.length || (state.character ? 1 : 0), takes: state.takes?.length || 0, prompts: state.compiledPrompts?.length || 0, projects: 0, favorites: 0, recentTakes: state.takes || [] };
       }
       const [profile, characters, takes, prompts] = await Promise.all([
         client.from('profiles').select('display_name,avatar_path,created_at').eq('id', userId).maybeSingle(),
