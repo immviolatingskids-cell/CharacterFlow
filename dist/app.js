@@ -108,7 +108,7 @@ function renderStage(){
 
 function renderTakes(){
   $('takeCount').textContent=state.takes.length;$('takesEmpty').style.display=state.takes.length?'none':'flex';
-  $('takesList').innerHTML=state.takes.map((take,index)=>{const snap=take.stateSnapshot,photo=snap?.visualSettings?.photography||{},scene=snap?.scene;return `<button class="take ${take.id===state.selectedTake?'selected':''}" data-take="${escape(take.id)}" aria-pressed="${take.id===state.selectedTake}"><span class="take-frame"><i>${sceneGlyph(scene?.id)}</i><em>${escape(photo.lens||'—')}</em></span><b>Take ${String(index+1).padStart(2,'0')}</b><small>${escape(scene?.name||photo.shotType||'Character study')}</small></button>`}).join('');
+  $('takesList').innerHTML=state.takes.map((take,index)=>{const snap=take.stateSnapshot,photo=snap?.visualSettings?.photography||{},scene=snap?.scene,thumb=take.image||sceneImage(scene?.id);return `<button class="take ${take.id===state.selectedTake?'selected':''}" data-take="${escape(take.id)}" aria-pressed="${take.id===state.selectedTake}"><span class="take-frame"><img src="${escape(thumb)}" alt="${escape(scene?.name||'Take')} thumbnail"><em>${escape(photo.lens||'—')}</em></span><b>Take ${String(index+1).padStart(2,'0')}</b><small>${escape(scene?.name||photo.shotType||'Character study')}</small></button>`}).join('');
   document.querySelectorAll('[data-take]').forEach(button=>button.onclick=()=>{state=promoteTake(state,button.dataset.take);render();button.scrollIntoView({behavior:motionOK()?'smooth':'auto',inline:'center',block:'nearest'})});
 }
 
