@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {ICON_REGISTRY,ICON_SEMANTIC_COUNT} from '../icon-registry.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const assets=['maya-cafe-portrait.png','scene-cafe.png','scene-street.png','scene-forest.png','wardrobe-capsule.png'];
@@ -14,6 +15,17 @@ test('active-character bitmap assets exist in source and publishable dist',()=>{
     assert.ok(fs.statSync(source).size>1000,`${asset} source asset is missing or empty`);
     assert.ok(fs.statSync(published).size>1000,`${asset} dist asset is missing or empty`);
     assert.equal(fs.readFileSync(source).equals(fs.readFileSync(published)),true,`${asset} source/dist mismatch`);
+  }
+});
+
+test('Solar registry is curated, semantic, and locally backed',()=>{
+  assert.ok(ICON_SEMANTIC_COUNT>=100&&ICON_SEMANTIC_COUNT<=200,`expected 100-200 semantic aliases, got ${ICON_SEMANTIC_COUNT}`);
+  const files=new Set(fs.readdirSync(path.join(root,'assets','icons')));
+  assert.equal(Object.keys(ICON_REGISTRY).length,new Set(Object.keys(ICON_REGISTRY)).size);
+  for(const entry of Object.values(ICON_REGISTRY)){
+    assert.equal(entry.source,'Solar');
+    assert.equal(entry.license,'CC BY 4.0');
+    assert.ok(files.has(`${entry.file}.svg`),`${entry.file}.svg is not locally vendored`);
   }
 });
 
