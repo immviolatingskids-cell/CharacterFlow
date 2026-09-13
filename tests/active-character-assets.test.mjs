@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {ICON_REGISTRY,ICON_SEMANTIC_COUNT} from '../icon-registry.js';
+
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const assets=['maya-cafe-portrait.png','scene-cafe.png','scene-street.png','scene-forest.png','wardrobe-capsule.png'];
+
+test('legacy bitmap assets remain available only as optional demo fixtures',()=>{
+  for(const asset of assets){
+    const source=path.join(root,'assets',asset);
+    const published=path.join(root,'dist','assets',asset);
+    assert.ok(fs.statSync(source).size>1000,`${asset} source asset is missing or empty`);
+    assert.ok(fs.statSync(published).size>1000,`${asset} dist asset is missing or empty`);
+    assert.equal(fs.readFileSync(source).equals(fs.readFileSync(published)),true,`${asset} source/dist mismatch`);
+  }
+});
+
+test('Solar registry is curated, semantic, and locally backed',()=>{
+  assert.ok(ICON_SEMANTIC_COUNT>=100&&ICON_SEMANTIC_COUNT<=200,`expected 100-200 semantic aliases, got ${ICON_SEMANTIC_COUNT}`);
+  const files=new Set(fs.readdirSync(path.join(root,'assets','icons')));
+  assert.equal(Object.keys(ICON_REGISTRY).length,new Set(Object.keys(ICON_REGISTRY)).size);
+  for(const entry of Object.values(ICON_REGISTRY)){
+    assert.equal(entry.source,'Solar');
+    assert.equal(entry.license,'CC BY 4.0');
+    assert.ok(files.has(`${entry.file}.svg`),`${entry.file}.svg is not locally vendored`);
+  }
+});
+
+test('active-character visual surfaces are semantic and reference-driven',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.doesNotMatch(app,/MAYA_PORTRAIT|sceneImage|WARDROBE_THUMBNAIL/);
+  assert.match(app,/createTake\(state,kind\)/);
+  assert.match(app,/SCENE_ICONS/);
+  assert.match(app,/icon\('apparel'/);
+  assert.match(app,/character\.references/);
+  assert.doesNotMatch(app,/find\(char=>.*⌂/);
+});
+
+test('command palette owns its close control and scroll boundary',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'audit-overrides.css'),'utf8');
+  assert.match(app,/commandClose/);
+  assert.match(app,/commandClose.*closeCommand/);
+  assert.match(css,/command-shell\{position:relative;box-sizing:border-box;overflow:hidden/);
+  assert.match(css,/command-results\{min-height:0;max-height:min\(430px,calc\(78vh - 206px\)\);overflow-y:auto/);
+});
+
+test('workspace navigation keeps Style Packs as a first-class destination',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'audit-overrides.css'),'utf8');
+  assert.match(app,/'style-packs':\['Style Packs'/);
+  assert.match(app,/button\.onclick=\(\)=>goWorkspace\(button\.dataset\.workspace\)/);
+  assert.match(css,/\.topbar\{gap:clamp\(18px,4vw,54px\)/);
+});
+
+test('image actions expose distinct accessible semantics',()=>{
+  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(app,/button\.id==='imageMoreBtn'\?'More image actions':'Open reference image'/);
+});

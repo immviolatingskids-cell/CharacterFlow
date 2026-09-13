@@ -1,0 +1,41 @@
+:root{
+  --surface-app:#0b1421;
+  --surface-panel:#121e2d;
+  --surface-panel-raised:#142235dd;
+  --surface-stage:#172335;
+  --surface-control:#142235;
+  --surface-console:#0b1420;
+  --border-subtle:#263447;
+  --border-panel:#334358;
+  --border-control:#3b4b62;
+  --accent-primary:#9a6dff;
+  --accent-secondary:#f2a9cd;
+  --accent-gradient:linear-gradient(100deg,#8657ff,#f45ba0);
+  --text-primary:#f4f1f6;
+  --text-secondary:#9ca9bb;
+  --text-muted:#7e8ba0;
+  --depth-panel:0 14px 35px #0002;
+  --depth-dialog:0 30px 100px #000b;
+  --type-ui:Inter,"Segoe UI",sans-serif;
+  --type-display:Georgia,serif;
+  --motion-instant:80ms;
+  --motion-fast:140ms;
+  --motion-normal:220ms;
+  --motion-slow:420ms;
+  --motion-hero:700ms;
+  --ease-standard:cubic-bezier(.2,.7,.2,1);
+  --ease-enter:cubic-bezier(.16,1,.3,1);
+  --ease-exit:cubic-bezier(.4,0,1,1);
+  --ease-spring:cubic-bezier(.2,1.35,.35,1);
+  --ease-forge:cubic-bezier(.16,.84,.24,1);
+  --app:var(--surface-app) !important;
+  --panel:var(--surface-panel) !important;
+  --stage:var(--surface-stage) !important;
+  --line:var(--border-panel) !important;
+  --text:var(--text-primary) !important;
+  --muted:var(--text-secondary) !important;
+  --pink:var(--accent-secondary) !important;
+  --purple:var(--accent-primary) !important;
+  --radius:12px !important;
+}
+
