@@ -100,7 +100,10 @@ export function createCloudStore({ client = null, local = globalThis.localStorag
         client.from('compiled_prompts').select('id', { count: 'exact', head: true }).eq('user_id', userId)
       ]);
       for (const result of [profile, characters, takes, prompts]) if (result.error) throw result.error;
-      return { profile: profile.data || null, characters: characters.count || 0, takes: takes.data?.length || 0, prompts: prompts.count || 0, projects: 0, favorites: 0, recentTakes: takes.data || [] };
+      const mediaUrl=async path=>{if(!path)return null;const {data,error}=await client.storage.from('promptforge-media').createSignedUrl(path,3600);return error?null:data?.signedUrl||null};
+      const resolvedProfile=profile.data?{...profile.data,avatar_url:await mediaUrl(profile.data.avatar_path)}:null;
+      const recentTakes=await Promise.all((takes.data||[]).map(async take=>({...take,image_url:await mediaUrl(take.image_path)})));
+      return { profile: resolvedProfile, characters: characters.count || 0, takes: recentTakes.length, prompts: prompts.count || 0, projects: 0, favorites: 0, recentTakes };
     }
   });
 }
