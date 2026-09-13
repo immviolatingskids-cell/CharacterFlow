@@ -37,7 +37,7 @@ export function switchCharacter(state,characterId){
 export function archiveCharacter(state,characterId,archived=true){
   const collection=normalizeCharacterCollection({...state,character:state.character}),characters=collection.characters.map(item=>item.id===characterId?{...item,archived,updatedAt:new Date().toISOString()}:item);
   let next={...state,characters};
-  if(archived&&state.activeCharacterId===characterId){const target=characters.find(item=>!item.archived)||characters.find(item=>item.id!==characterId);next=switchCharacter({...next,character:null},target?.id)}
+  if(archived&&state.activeCharacterId===characterId){const target=characters.find(item=>!item.archived)||characters.find(item=>item.id!==characterId);next=target?switchCharacter({...next,character:null},target.id):{...next,activeCharacterId:null,character:null,selectedTake:null,lastPrompt:null,resolvedDirectorState:null,dirty:true}}
   return next;
 }
 

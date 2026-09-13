@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {blankState,createCharacter,restoreState,serializeState} from '../studio-core.js';
-import {suggestInterests,generatePersonality,normalizeWardrobe,suggestWardrobePieces} from '../assisted-creation.js';
+import {suggestInterests,generatePersonality,normalizeWardrobe,suggestWardrobePieces,interestSignalsFromStylePacks} from '../assisted-creation.js';
+import {archiveCharacter} from '../character-library.js';
 import {createCloudStore} from '../cloud-store.js';
 
 const state=()=>createCharacter({...blankState(),scene:{id:'cafe',tags:['creative']},interestState:{characterInterests:['programming'],activeContext:['technology']}},{name:'Rin'});
@@ -12,3 +13,5 @@ test('wardrobe slots allow empty and preserve manual pieces while suggesting onl
 test('one-piece wardrobe suggestions do not invent separate top or bottom',()=>{const s=state();const wardrobe=normalizeWardrobe({slots:{onePiece:'linen jumpsuit',top:'',bottom:''}});const suggestions=suggestWardrobePieces({...s,wardrobe},{seed:'one-piece'});assert.equal(suggestions.top,undefined);assert.equal(suggestions.bottom,undefined);assert.ok(suggestions.shoes);});
 test('slot wardrobe fields survive save and reload',()=>{const s=state();const saved={...s,wardrobe:normalizeWardrobe({source:'manual',locked:true,slots:{onePiece:'linen jumpsuit',top:'',bottom:'',shoes:'canvas shoes'}})};const restored=restoreState(serializeState(saved));assert.equal(restored.wardrobe.slots.onePiece,'linen jumpsuit');assert.equal(restored.wardrobe.slots.top,'');assert.equal(restored.wardrobe.locked,true);});
 test('local and cloud persistence adapters retain the assisted state shape',async()=>{const s={...state(),wardrobe:normalizeWardrobe({source:'manual',slots:{onePiece:'linen jumpsuit'}})};const localData=new Map();const local=createCloudStore({local:{getItem:key=>localData.get(key)||null,setItem:(key,value)=>localData.set(key,value)}});await local.saveCharacter(s,'local-user');assert.deepEqual(JSON.parse(localData.get('promptforge-studio-v2')).wardrobe.slots,s.wardrobe.slots);let payload=null;const client={from:()=>({upsert:async value=>{payload=value;return {error:null}}})};const cloud=createCloudStore({client});await cloud.saveCharacter(s,'cloud-user');assert.deepEqual(payload.state.wardrobe.slots,s.wardrobe.slots);assert.equal(payload.id,s.character.id);});
+test('style interest signals derive from pack semantics instead of pack ids',()=>{const signals=interestSignalsFromStylePacks({influences:[{packId:'y2k',weight:1}]});assert.ok(signals.includes('fashion'));assert.ok(signals.includes('creative'));});
+test('archiving the sole active character clears active state',()=>{const s=state();const archived=archiveCharacter(s,s.character.id,true);assert.equal(archived.activeCharacterId,null);assert.equal(archived.character,null);assert.equal(archived.characters[0].archived,true);});
