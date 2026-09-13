@@ -1,0 +1,6 @@
+/* Final cascade overrides for the active-character workstation. */
+@media (max-width: 1400px) and (min-width: 761px){
+  .workgrid{grid-template-columns:minmax(220px,.85fr) minmax(360px,1.45fr) minmax(220px,.85fr)}
+  .generation{grid-column:1/-1;grid-row:3;display:grid;grid-template-columns:1fr 1fr}
+  .generation .panel{min-width:0}
+}
