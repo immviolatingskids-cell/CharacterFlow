@@ -30,6 +30,7 @@ try{
   const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))});
   await command('Runtime.enable');await command('Page.enable');await wait(1800);
   const evaluate=async expression=>{const response=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(response.exceptionDetails)throw new Error(response.exceptionDetails.exception?.description||response.exceptionDetails.text||'browser evaluation failed');return response.result.value};
+  let appReady=false;for(let attempt=0;attempt<80;attempt++){appReady=await evaluate("document.readyState==='complete'&&!!document.getElementById('workspaceRoot')");if(appReady)break;await wait(100)}if(!appReady)throw new Error('PromptForge app did not finish loading');
   await evaluate("localStorage.clear();document.querySelector('[data-workspace=\"create\"]').click();document.getElementById('surpriseBtn').click()");await wait(1300);
   await evaluate("document.getElementById('browseStyleBtn').click();const toggle=document.querySelector('[data-drawer-pack-toggle=\"tech-girlie\"]');if(!toggle.checked)toggle.click()");await wait(100);
   await evaluate("document.querySelector('[data-close-drawer]').click();document.getElementById('sceneBtn').click();document.querySelector('[data-scene-id=\"cafe\"]').click();document.getElementById('inspectBtn').click()");await wait(300);
@@ -52,4 +53,3 @@ try{
   socket?.close();browser.kill();await Promise.race([once(browser,'exit'),wait(2000)]);server.close();
   for(let attempt=0;attempt<10;attempt++){try{rmSync(profile,{recursive:true,force:true,maxRetries:2,retryDelay:100});break}catch(error){if(attempt===9)console.warn(`Temporary browser profile cleanup deferred: ${error.code}`);else await wait(200)}}
 }
-
