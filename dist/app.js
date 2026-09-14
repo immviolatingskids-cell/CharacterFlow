@@ -1,5 +1,5 @@
 import {blankState,stageMode,createCharacter,editCharacter,addReference,restoreState,resolveStudioState,compilePrompt,compileGeneration,createTake,promoteTake,MockCompiler} from './studio-core.js';
-import {suggestInterests,generatePersonality,suggestWardrobePieces,normalizeWardrobe,interestSignalsFromStylePacks} from './assisted-creation.js';
+import {suggestInterests,generatePersonality,suggestWardrobePieces,normalizePersonality,normalizeWardrobe,interestSignalsFromStylePacks} from './assisted-creation.js';
 import {STYLE_PACK_LIST} from './style-packs.js';
 import {forgeOrbital,editorialNote} from './ui-assets.js';
 import {icon} from './icon-registry.js';
