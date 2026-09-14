@@ -1,4 +1,5 @@
 import {STYLE_PACKS,RESOLVER_CATEGORIES,STYLE_DOMAINS} from './style-packs.js';
+import {normalizeOccupation,relationshipsForStylePack} from './occupations.js';
 
 const clone = value => structuredClone(value);
 const round = value => Math.round(value * 100000) / 100000;
@@ -64,5 +65,8 @@ export function resolveStyleState(state,seed='promptforge-default',registry=STYL
   for(const category of RESOLVER_CATEGORIES){const override=manualValue(state,category);const candidates=candidatesFor(category,normalizedMix,state,registry,seed);const topScore=candidates[0]?.score||0;const styleAuthority=round(styleStrength*Math.min(1,topScore));if(override){resolved[category]=override.value;categories[category]={styleAuthority:1,selection:{id:null,value:clone(override.value),score:null,authority:1,source:override.source},candidates};continue;}const selected=styleAuthority>0?candidates.find(candidate=>candidate.score>0&&!candidate.conflicts.some(id=>selectedIds.has(id)))||null:null;resolved[category]=selected?clone(selected.value):null;if(selected)selectedIds.add(selected.id);categories[category]={styleAuthority,selection:selected?{id:selected.id,value:clone(selected.value),score:selected.score,authority:styleAuthority,source:'style-mix'}:null,candidates};}
   const legacyAliases={styling:'accessories',environment:'locations',photography:'visual'};for(const [legacy,current] of Object.entries(legacyAliases))categories[legacy]=categories[current];
   if(JSON.stringify(state.character)!==characterBefore)throw new Error('Resolver attempted to mutate Character Core');
-  return {resolver:{name:'PromptForge Resolver',version:'1.1',seed:String(seed),strategy:'bounded-context-independent-ranking-strength-authority'},character:clone(state.character),styleMix:{strength:styleStrength,normalizedInfluences:normalizedMix},context:{scene:clone(state.scene||null),activeContext:clone(state.interestState?.activeContext||[]),wardrobe:clone(state.wardrobe||null),visualSettings:clone(state.visualSettings||null)},resolved,provenance:{categories}};
+  const occupationValue=state.character.identity?.occupation;
+  const occupation=normalizeOccupation(occupationValue);
+  const occupationContributions=occupation?normalizedMix.flatMap(influence=>relationshipsForStylePack(influence.packId).filter(item=>item.occupationId===occupation.id).map(item=>({occupationId:occupation.id,stylePackId:influence.packId,relationshipType:item.relationshipType,contribution:round(influence.normalizedWeight*item.weight*.2),reason:item.rationale}))).filter(item=>item.contribution>0):[];
+  return {resolver:{name:'PromptForge Resolver',version:'1.1',seed:String(seed),strategy:'bounded-context-independent-ranking-strength-authority'},character:clone(state.character),styleMix:{strength:styleStrength,normalizedInfluences:normalizedMix},context:{scene:clone(state.scene||null),activeContext:clone(state.interestState?.activeContext||[]),wardrobe:clone(state.wardrobe||null),visualSettings:clone(state.visualSettings||null)},resolved,provenance:{categories,occupation:occupation?{occupationId:occupation.id,contributions:occupationContributions}:null}};
 }
