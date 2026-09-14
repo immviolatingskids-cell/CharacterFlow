@@ -52,7 +52,7 @@ test('workspace navigation keeps Style Packs as a first-class destination',()=>{
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'audit-overrides.css'),'utf8');
   assert.match(app,/'style-packs':\['Style Packs'/);
-  assert.match(app,/button\.onclick=\(\)=>goWorkspace\(button\.dataset\.workspace\)/);
+  assert.match(app,/button\.onclick=event=>\{if\(button\.tagName==='A'\)event\.preventDefault\(\);goWorkspace\(button\.dataset\.workspace\)\}/);
   assert.match(css,/\.topbar\{gap:clamp\(18px,4vw,54px\)/);
 });
 

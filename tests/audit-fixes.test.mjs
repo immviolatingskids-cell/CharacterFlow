@@ -5,13 +5,38 @@ import fs from 'node:fs';
 const root = new URL('../', import.meta.url);
 const read = name => fs.readFileSync(new URL(name, root), 'utf8');
 
-test('audited navigation keeps labels aligned and removes dead settings entry', () => {
+test('audited navigation keeps labels aligned and exposes a working Settings workspace', () => {
   const html = read('index.html');
   const app = read('app.js');
-  assert.match(html, /data-workspace="inspiration">Inspiration/);
-  assert.doesNotMatch(html, /data-workspace="settings"/);
-  assert.doesNotMatch(app, /Open Settings/);
-  assert.doesNotMatch(app, /settings:\['Settings'/);
+  assert.match(html, /data-workspace="inspiration" href="#workspace=inspiration">Inspiration/);
+  assert.match(html, /data-workspace="library" href="#workspace=library">Library/);
+  assert.match(app, /settings:\['Settings','Workspace preferences'/);
+  assert.match(app, /function renderSettingsWorkspace/);
+  assert.match(app, /data-workspace="settings"/);
+});
+
+test('drawers and workspace routing are keyboard-safe and deep-linkable', () => {
+  const app = read('app.js');
+  assert.match(app, /drawer\.inert=!open/);
+  assert.match(app, /document\.querySelectorAll\('\.drawer:not\(\.open\)'\)\.forEach\(drawer=>drawer\.inert=true\)/);
+  assert.match(app, /function workspaceFromHash\(hash=location\.hash\)/);
+  assert.match(app, /window\.history\.pushState\(null,'',hash\)/);
+  assert.match(app, /window\.addEventListener\('hashchange'/);
+});
+
+test('mobile Library uses the compact category control instead of a scroll rail', () => {
+  const css = read('styles.css');
+  assert.match(css, /\.library-categories\{display:none\}/);
+  assert.match(css, /\.library-filter select\{width:100%\}/);
+});
+
+test('settings preferences are device-local and leave canonical studio data untouched', () => {
+  const app = read('app.js');
+  const css = read('styles.css');
+  assert.match(app, /function saveUI\(\)\{localStorage\.setItem\(UI_KEY/);
+  assert.match(app, /Preferences here are saved only on this device/);
+  assert.match(app, /Character Core, Take, Project or Library data is removed/);
+  assert.match(css, /html\[data-motion="reduce"\]/);
 });
 
 test('audited Inspiration surface exposes only working modes', () => {
