@@ -47,3 +47,17 @@ test('annotated controls describe their actual behavior and preserve working sta
   assert.match(app, /id="newProjectBtn"/);
   assert.match(app, /state=createProject\(state/);
 });
+
+test('image prompt surface keeps diagnostics advanced and readable', () => {
+  const html = read('index.html');
+  const app = read('app.js');
+  const css = read('styles.css');
+  assert.match(html, /IMAGE PROMPT/);
+  assert.match(html, /Advanced generation settings/);
+  assert.doesNotMatch(html, /id="inspector"/);
+  assert.match(app, /image prompt ready/);
+  assert.match(app, /if\(\$\('inspectorOutput'\)\)/);
+  assert.match(css, /\.prompt-preview\{[^}]*white-space:pre-wrap/);
+  assert.match(app, /Core values/);
+  assert.match(app, /Direction in Studio/);
+});
