@@ -71,4 +71,5 @@ test('layout audit corrections keep prompt, wardrobe, style and stage controls u
   assert.match(app, /pack-examples/);
   assert.match(app, /editorialNote\(activeTake\?'Character direction captured/);
   assert.match(css, /\.portrait-frame\{background:transparent!important/);
+  assert.match(css, /\.inspiration-concept button\{min-width:32px;min-height:32px/);
 });
