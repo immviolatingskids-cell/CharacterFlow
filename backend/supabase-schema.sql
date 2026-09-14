@@ -45,15 +45,25 @@ create table if not exists public.compiled_prompts (
   primary key (user_id, id)
 );
 
+create table if not exists public.enrichment_reviews (
+  id text not null default 'workspace',
+  user_id uuid not null references auth.users(id) on delete cascade,
+  queue jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, id)
+);
+
 alter table public.profiles enable row level security;
 alter table public.characters enable row level security;
 alter table public.takes enable row level security;
 alter table public.compiled_prompts enable row level security;
+alter table public.enrichment_reviews enable row level security;
 
 create policy "own profile" on public.profiles for all using (id = auth.uid()) with check (id = auth.uid());
 create policy "own characters" on public.characters for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own takes" on public.takes for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own prompts" on public.compiled_prompts for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own enrichment reviews" on public.enrichment_reviews for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 insert into storage.buckets (id, name, public) values ('promptforge-media', 'promptforge-media', false)
 on conflict (id) do nothing;

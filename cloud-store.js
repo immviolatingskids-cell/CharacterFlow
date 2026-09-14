@@ -90,6 +90,21 @@ export function createCloudStore({ client = null, local = globalThis.localStorag
       if (error) throw error;
       return { mode: 'cloud' };
     },
+    async saveReviewQueue(queue, userId) {
+      if (!queue) return { mode: client ? 'cloud' : 'local', skipped: true };
+      requireUser(userId);
+      if (!client) { local?.setItem(`${localKey}-enrichment-review`, JSON.stringify(queue)); return { mode: 'local' }; }
+      const { error } = await client.from('enrichment_reviews').upsert({ user_id: userId, id: 'workspace', queue });
+      if (error) throw error;
+      return { mode: 'cloud' };
+    },
+    async loadReviewQueue(userId) {
+      requireUser(userId);
+      if (!client) return JSON.parse(local?.getItem(`${localKey}-enrichment-review`) || 'null');
+      const { data, error } = await client.from('enrichment_reviews').select('queue').eq('user_id', userId).eq('id', 'workspace').maybeSingle();
+      if (error) throw error;
+      return data?.queue || null;
+    },
     async uploadReference(file, userId, path = `references/${globalThis.crypto.randomUUID()}`) {
       requireUser(userId);
       if (!client) return { mode: 'local', path, file };
