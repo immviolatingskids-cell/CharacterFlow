@@ -119,7 +119,7 @@ test('Send to Studio changes only intended working domains and never creates a T
   assert.equal(applied.selectedTake, null);
   assert.equal(applied.scene.source, 'inspiration');
   assert.match(applied.visualSettings.lighting.behaviour, /Warm interior/i);
-  assert.deepEqual(applied.styleMix.influences, [{ packId: 'streetwear', weight: 100 }]);
+  assert.deepEqual(applied.styleMix, state.styleMix);
   assert.equal(applied.workingDirection.source, 'inspiration');
 });
 
@@ -133,6 +133,30 @@ test('Send to Studio respects locked wardrobe and photography controls', () => {
   const applied = applyInspirationToStudio(state, direction);
   assert.deepEqual(applied.wardrobe, state.wardrobe);
   assert.deepEqual(applied.visualSettings.photography, state.visualSettings.photography);
+});
+
+test('Send to Studio respects locked scene and lighting controls while preserving Style Mix', () => {
+  const direction = {
+    selected: {
+      setting: { id: 'bookshop', label: 'New setting' },
+      lighting: { id: 'warm', label: 'New lighting' },
+      style: { id: 'streetwear', label: 'Streetwear' }
+    },
+    concepts: [],
+    engine: {}
+  };
+  const state = {
+    ...blankState(),
+    scene: { id: 'existing-scene', name: 'Keep scene', location: 'Existing place', activity: 'Existing activity', locked: true },
+    generationOptions: { ...blankState().generationOptions, keepScene: true },
+    resolverLocks: { lighting: true },
+    styleMix: { influences: [{ packId: 'tech-girlie', weight: 70 }, { packId: 'dark-academia', weight: 30 }], strength: .6, locks: {} }
+  };
+  const applied = applyInspirationToStudio(state, direction);
+  assert.deepEqual(applied.scene, state.scene);
+  assert.deepEqual(applied.visualSettings.lighting, state.visualSettings.lighting);
+  assert.deepEqual(applied.styleMix, state.styleMix);
+  assert.equal(applied.workingDirection.selected.style.label, 'Streetwear');
 });
 
 test('Add to Project stores a compact Inspiration reference without changing ownership', () => {

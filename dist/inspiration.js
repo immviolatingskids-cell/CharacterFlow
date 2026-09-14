@@ -1,6 +1,5 @@
 import { INFLUENCE_DOMAINS, resolveCreativeDirection } from './creative-relationships.js';
 import { normalizeWardrobe } from './assisted-creation.js';
-import { STYLE_PACKS } from './style-packs.js';
 import { addProjectInspiration } from './project-library.js';
 
 export const INSPIRATION_SCHEMA_VERSION = 1;
@@ -209,10 +208,9 @@ export function applyInspirationToStudio(state, direction = state?.inspirationSt
   const lighting = selected.lighting?.label;
   const wardrobe = selected.wardrobe?.label;
   const lens = camera?.match(/\b\d{2,3}mm\b/i)?.[0];
-  const stylePack = selected.style && STYLE_PACKS[selected.style.id];
   const next = {
     ...state,
-    scene: setting ? {
+    scene: setting && !state.generationOptions?.keepScene && !state.scene?.locked && !state.resolverLocks?.scene ? {
       id: `inspiration-${selected.setting.id}`,
       name: setting,
       location: setting,
@@ -232,12 +230,11 @@ export function applyInspirationToStudio(state, direction = state?.inspirationSt
         shotType: camera.replace(/\s*\b\d{2,3}mm\b/i, '').trim() || camera,
         ...(lens ? { lens } : {})
       } : state.visualSettings.photography,
-      lighting: lighting ? { ...state.visualSettings.lighting, behaviour: lighting } : state.visualSettings.lighting
+      lighting: lighting && !state.visualSettings.lighting?.locked && !state.resolverLocks?.lighting
+        ? { ...state.visualSettings.lighting, behaviour: lighting }
+        : state.visualSettings.lighting
     },
-    styleMix: stylePack ? {
-      ...state.styleMix,
-      influences: [{ packId: stylePack.id, weight: 100 }]
-    } : state.styleMix,
+    styleMix: state.styleMix,
     workingDirection: {
       source: 'inspiration',
       seed: direction.engine?.seed || null,
