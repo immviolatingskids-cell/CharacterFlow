@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {STYLE_PACKS} from '../style-packs.js';
-import {createSupabaseContentStore, transformContentRows, validateContentImport, previewApprovedManifest, normalizedImportRows, CONTENT_DOMAINS} from '../supabase-content-store.js';
+import {createSupabaseContentStore, transformContentRows, validateContentImport, previewApprovedManifest, normalizedImportRows, importApprovedManifest, CONTENT_DOMAINS} from '../supabase-content-store.js';
 
 test('normalized content schema and seeds exist', () => {
   for (const file of ['backend/supabase-content-schema.sql','backend/seed/archetypes.sql','backend/seed/content-items.sql','backend/seed/archetype-influences.sql']) assert.equal(fs.existsSync(file), true, file);
@@ -57,4 +57,11 @@ test('approved import preserves human name and provenance', () => {
   const rows=normalizedImportRows({candidates:[{reviewStatus:'approved',stylePackId:'tech-girlie',stylePackName:'Tech Girlie',label:'AI',source:'generated',weight:.8}]});
   assert.equal(rows[0].archetype.name,'Tech Girlie');
   assert.equal(rows[0].influences[0].provenance,'generated');
+});
+
+test('approved manifest imports normalized rows through Supabase upserts', async () => {
+  const calls=[]; let sequence=0;
+  const client={from(table){return {select(){return Promise.resolve({data:table==='content_domains'?[{id:'d',slug:'occupations'}]:[],error:null})},upsert(row){calls.push([table,row]);return {select(){return {single(){return Promise.resolve({data:{id:`${table}-${++sequence}`},error:null})}}},then(resolve){return resolve({data:null,error:null})}}}}}};
+  const result=await importApprovedManifest(client,{candidates:[{reviewStatus:'approved',stylePackId:'tech-girlie',stylePackName:'Tech Girlie',label:'AI',domain:'occupations',source:'generated',weight:.8}]});
+  assert.equal(result.influences.length,1); assert.equal(calls.length,3); assert.equal(calls[1][1].provenance,'generated');
 });

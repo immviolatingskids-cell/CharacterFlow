@@ -52,3 +52,30 @@ export function previewApprovedManifest(manifest) { return (manifest?.candidates
 export function normalizedImportRows(manifest) {
   return previewApprovedManifest(manifest).map(group => ({...group, influences: group.influences.map(item => ({...item, provenance: item.provenance || 'generated'}))}));
 }
+
+const checked = async operation => {
+  const result = await operation;
+  if (result?.error) throw result.error;
+  return result?.data;
+};
+
+// Import is intentionally an explicit, privileged operation. Public clients should
+// remain read-only; call this from a trusted review/admin adapter.
+export async function importApprovedManifest(client, manifest) {
+  if (!client?.from) throw new Error('Supabase client is required');
+  const groups = normalizedImportRows(manifest);
+  const domains = await checked(client.from('content_domains').select('id,slug')) || [];
+  const domainIds = new Map(domains.map(row => [row.slug, row.id]));
+  const imported = [];
+  for (const group of groups) {
+    const archetype = await checked(client.from('archetypes').upsert({slug: group.archetype.slug, name: group.archetype.name, status: 'active'}, {onConflict: 'slug'}).select('id').single());
+    for (const item of group.influences) {
+      const domainId = domainIds.get(item.domain);
+      if (!domainId) throw new Error(`Unknown content domain: ${item.domain}`);
+      const content = await checked(client.from('content_items').upsert({domain_id: domainId, slug: item.slug, label: item.item, provenance: item.provenance, review_status: 'approved'}, {onConflict: 'domain_id,slug'}).select('id').single());
+      await checked(client.from('archetype_influences').upsert({archetype_id: archetype.id, content_item_id: content.id, weight: item.weight, relationship_type: item.relationshipType, rationale: item.rationale, provenance: item.provenance, review_status: 'approved'}, {onConflict: 'archetype_id,content_item_id'}));
+      imported.push({archetypeId: archetype.id, contentItemId: content.id, domain: item.domain});
+    }
+  }
+  return {groups: groups.length, influences: imported};
+}
