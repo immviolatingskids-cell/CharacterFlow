@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OCCUPATION_LIST, OCCUPATION_RELATIONSHIP_TYPES, suggestOccupations, occupationCoverageDiagnostics, validateOccupationRegistry, normalizeOccupation} from '../occupations.js';
+import {blankState, createCharacter, resolveStudioState} from '../studio-core.js';
 
 test('occupation registry is normalized, curated, and covered', () => {
   const diagnostics = validateOccupationRegistry();
@@ -25,4 +26,15 @@ test('occupation normalization supports aliases without changing input', () => {
 test('coverage reports pending candidates separately', () => {
   const pending = [...OCCUPATION_LIST, {...OCCUPATION_LIST[0], id: 'candidate', provenance: 'generated', reviewStatus: 'pending'}];
   assert.equal(occupationCoverageDiagnostics(pending).pendingCandidates, 1);
+});
+
+test('occupation influences resolver scores softly and preserves alternatives', () => {
+  const base = createCharacter(blankState(), {name: 'Rin', occupation: 'Software Engineer'});
+  const state = {...base, styleMix: {...base.styleMix, influences: [{packId: 'tech-girlie', weight: 100}]}};
+  const before = structuredClone(state.character);
+  const resolved = resolveStudioState(state, {seed: 'occupation'});
+  const laptop = resolved.provenance.categories.props.candidates.find(item => item.id === 'slim-laptop');
+  assert.ok(laptop.contributions.some(item => item.occupationMultiplier > 1));
+  assert.ok(resolved.provenance.categories.props.candidates.length > 1);
+  assert.deepEqual(state.character, before);
 });
