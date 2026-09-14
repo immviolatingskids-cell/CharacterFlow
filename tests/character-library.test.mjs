@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {blankState,createCharacter,createTake,restoreState,serializeState} from '../studio-core.js';
-import {switchCharacter,archiveCharacter,deleteCharacter,migrateCharacterState} from '../character-library.js';
+import {switchCharacter,archiveCharacter,deleteCharacter,duplicateCharacter,migrateCharacterState} from '../character-library.js';
 import {createCloudStore} from '../cloud-store.js';
 
 const make=(name)=>createCharacter(blankState(),{name,location:`${name} City`,occupation:`${name} Maker`});
@@ -58,6 +58,22 @@ test('archive keeps identity and selects another active character',()=>{
   const archived=archiveCharacter(state,first.character.id,true);
   assert.equal(archived.characters.find(item=>item.id===first.character.id).archived,true);
   assert.equal(archived.activeCharacterId,second.character.id);
+});
+
+test('duplicate creates an isolated Core with no selected Take or transient prompt',()=>{
+  let state=createTake(make('Source'),'source-take');
+  state={...state,lastPrompt:{id:'prompt_source',characterId:state.character.id},resolvedDirectorState:{resolved:{scene:'source'}},compiledPrompts:[{id:'prompt_source',characterId:state.character.id}]};
+  const sourceId=state.character.id,duplicated=duplicateCharacter(state,sourceId);
+  assert.equal(duplicated.characters.length,2);
+  assert.notEqual(duplicated.character.id,sourceId);
+  assert.equal(duplicated.character.name,'Source Copy');
+  assert.equal(duplicated.character.revision,1);
+  assert.equal(duplicated.selectedTake,null);
+  assert.equal(duplicated.lastPrompt,null);
+  assert.equal(duplicated.resolvedDirectorState,null);
+  assert.equal(duplicated.takes.filter(take=>take.characterId===duplicated.character.id).length,0);
+  duplicated.character.interests.push('new interest');
+  assert.ok(!duplicated.characters.find(character=>character.id===sourceId).interests.includes('new interest'));
 });
 
 test('collection and Take associations survive save and reload',()=>{

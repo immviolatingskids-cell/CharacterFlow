@@ -52,6 +52,7 @@ export function deleteCharacter(state,characterId,{force=false}={}){
   if(target&&activeWas)next=switchCharacter(next,target.id);
   return next;
 }
+export function duplicateCharacter(state,characterId){const source=(state.characters||[]).find(character=>character.id===characterId);if(!source)return state;const id=makeId(),copy={...clone(source),id,name:`${source.name} Copy`,revision:1,references:clone(source.references||[])};return {...state,characters:[...(state.characters||[]),copy],character:clone(copy),activeCharacterId:id,selectedTake:null,lastPrompt:null,resolvedDirectorState:null,dirty:false};}
 
 export function migrateCharacterState(state){
   const collection=normalizeCharacterCollection(state),active=collection.characters.find(item=>item.id===collection.activeCharacterId)||null;
