@@ -109,7 +109,7 @@ export function createCloudStore({ client = null, local = globalThis.localStorag
       requireUser(userId);
       if (!client) {
         const state = JSON.parse(localRead() || '{}');
-        return { profile: null, characters: state.characters?.length || (state.character ? 1 : 0), takes: state.takes?.length || 0, prompts: state.compiledPrompts?.length || 0, projects: 0, favorites: 0, recentTakes: state.takes || [] };
+        return { profile: null, characters: state.characters?.length || (state.character ? 1 : 0), takes: state.takes?.length || 0, prompts: state.compiledPrompts?.length || 0, projects: state.projects?.length || 0, favorites: 0, recentTakes: state.takes || [] };
       }
       const [profile, characters, takes, prompts] = await Promise.all([
         client.from('profiles').select('display_name,avatar_path,created_at').eq('id', userId).maybeSingle(),

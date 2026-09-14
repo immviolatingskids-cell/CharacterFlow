@@ -47,7 +47,8 @@ export function deleteCharacter(state,characterId,{force=false}={}){
   const characters=collection.characters.filter(item=>item.id!==characterId),activeWas=state.activeCharacterId===characterId;
   const takes=force?(state.takes||[]).filter(take=>take.characterId!==characterId):(state.takes||[]),compiledPrompts=force?(state.compiledPrompts||[]).filter(prompt=>prompt.characterId!==characterId):(state.compiledPrompts||[]);
   const target=activeWas?characters.find(item=>!item.archived)||characters[0]:collection.characters.find(item=>item.id===state.activeCharacterId);
-  let next={...state,characters,takes,compiledPrompts,activeCharacterId:target?.id||null,character:target?clone(target):null,selectedTake:null,lastPrompt:null,resolvedDirectorState:null,dirty:true};
+  const projects=(state.projects||[]).map(project=>({...project,characterIds:(project.characterIds||[]).filter(id=>id!==characterId),takeIds:(project.takeIds||[]).filter(id=>takes.some(take=>take.id===id)),updatedAt:new Date().toISOString()}));
+  let next={...state,characters,takes,compiledPrompts,projects,activeCharacterId:target?.id||null,character:target?clone(target):null,selectedTake:null,lastPrompt:null,resolvedDirectorState:null,dirty:true};
   if(target&&activeWas)next=switchCharacter(next,target.id);
   return next;
 }
