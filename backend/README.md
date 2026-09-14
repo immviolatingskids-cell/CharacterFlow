@@ -4,8 +4,9 @@ This is the small, private-cloud foundation for the personal PromptForge workspa
 
 1. Create a Supabase project and enable email authentication.
 2. Run `supabase-schema.sql` in the SQL editor.
-3. Configure the frontend with the project URL and anonymous client key.
-4. Never put a service-role key or generation-provider key in the frontend.
+3. Run `supabase-content-schema.sql`, then execute the files in `seed/` in this order: `archetypes.sql`, `content-items.sql`, `archetype-influences.sql`.
+4. Configure the frontend with the project URL and anonymous client key.
+5. Never put a service-role key or generation-provider key in the frontend.
 
 For local development, copy `cloud-config.example.js` to `cloud-config.js` and fill in the project URL and publishable anonymous key. Load that file before `app.js`. If it is absent, PromptForge remains local-only.
 

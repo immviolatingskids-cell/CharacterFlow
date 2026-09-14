@@ -12,4 +12,12 @@ from (values
 ) x(archetype_slug,item_slug,weight,relationship_type,rationale)
 join public.archetypes a on a.slug=x.archetype_slug
 join public.content_items i on i.slug=x.item_slug
+join public.content_domains d on d.id=i.domain_id and d.slug = case
+  when x.item_slug = 'oversized-blazer' then 'wardrobe'
+  when x.item_slug = 'software-engineer' then 'occupations'
+  when x.item_slug in ('slim-laptop','reusable-water-bottle','annotated-paperback') then 'props'
+  when x.item_slug = 'creative-workspace' then 'locations'
+  when x.item_slug = 'assured-playful' then 'mood'
+  when x.item_slug = 'clean-editorial' then 'visual'
+end
 on conflict (archetype_id,content_item_id) do update set weight=excluded.weight, relationship_type=excluded.relationship_type, rationale=excluded.rationale, updated_at=now();

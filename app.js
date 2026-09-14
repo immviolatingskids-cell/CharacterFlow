@@ -11,6 +11,7 @@ import {APPEARANCE_CHOICES,CHARACTER_TEMPLATES,INTEREST_CHOICES,LIGHTING_CHOICES
 import {compilePromptPreview} from './prompt-provider.js';
 import {createProject,updateProject,archiveProject,deleteProject,attachCharacter,detachCharacter,attachTake,detachTake,openProjectCharacter,openProjectTake} from './project-library.js';
 import {INFLUENCE_DOMAINS} from './creative-relationships.js';
+import {createSupabaseContentStore} from './supabase-content-store.js';
 import {INSPIRATION_STARTERS,addInspirationToProject,appendInspirationConcept,applyInspirationToStudio,availableTakeSemanticDomains,buildInspirationDirection,buildInspirationFromTakeSignals,directionPreviewData,normalizeInspirationState,rebalanceInspirationWeights,removeInspirationConcept,resetInspirationWeights,setInspirationIdea} from './inspiration.js';
 import {
   createCloudStore,
@@ -21,6 +22,7 @@ import {
 const cloudStore = createCloudStore({
   client: window.promptforgeSupabase
 });
+const contentStore = createSupabaseContentStore({client: window.promptforgeSupabase, signedIn: Boolean(window.promptforgeSupabase)});
 
 const KEY='promptforge-studio-v2';
 const UI_KEY='promptforge-studio-ui-v1';
@@ -37,6 +39,7 @@ function demoState(){
 console.log('[Cloud Store]', cloudStore.mode);
 
 let state=loadState();
+contentStore.loadCatalogue().then(catalogue=>{state={...state,contentCatalogue:catalogue};render()}).catch(()=>{});
 let ui=loadUI();
 let activeWorkspace=workspaceFromHash()||localStorage.getItem('promptforge-workspace')||'create';
 let activeDrawer=null;
