@@ -1,4 +1,47 @@
-import {STYLE_PACKS} from './style-packs.js';import {normalizeStyleMix} from './resolver-v1.js';import {normalizeCreativeConcept} from './creative-relationships.js';
-export const TAKE_SEMANTIC_SCHEMA_VERSION=1;export const TAKE_SEMANTIC_DOMAINS=Object.freeze(['style','setting','activity','wardrobe','camera','lighting','mood']);const value=x=>String(x??'').trim(),one=(x,e={})=>{const label=value(x),id=normalizeCreativeConcept(label);return id?{id,label,...e}:null},add=(a,x,e)=>{for(const v of Array.isArray(x)?x:[x]){const n=one(v,e);if(n)a.push(n)}},unique=a=>{const s=new Set();return a.filter(x=>x?.id&&!s.has(x.id)&&(s.add(x.id),true))},snapshot=t=>t?.stateSnapshot||t?.snapshot||t||{};
-export function projectTakeSemantics(t){const s=snapshot(t),r={schemaVersion:1,style:[],setting:[],activity:[],wardrobe:[],camera:[],lighting:[],mood:[],tags:[]};for(const i of normalizeStyleMix(s.styleMix?.influences,STYLE_PACKS)){const p=STYLE_PACKS[i.packId];if(p)r.style.push({id:p.id,label:p.name,weight:i.weight,normalizedWeight:i.normalizedWeight})}const scene=s.scene||{},wardrobe=s.wardrobe||{},photo=s.visualSettings?.photography||{},light=s.visualSettings?.lighting||{},expression=s.visualSettings?.expression||{};add(r.setting,scene.id?scene.name||scene.id:null,scene.id?{sceneId:scene.id}:{});add(r.setting,scene.location);add(r.activity,scene.activity);add(r.wardrobe,wardrobe.items);for(const [slot,v] of Object.entries(wardrobe.slots||{}))add(r.wardrobe,v,{slot});add(r.camera,photo.shotType,{kind:'shotType'});add(r.camera,photo.lens,{kind:'lens'});add(r.camera,photo.angle,{kind:'angle'});add(r.lighting,light.behaviour,{kind:'behaviour'});add(r.lighting,light.colourTreatment,{kind:'colourTreatment'});add(r.mood,expression.expression,{kind:'expression'});add(r.mood,scene.mood,{kind:'sceneMood'});for(const d of TAKE_SEMANTIC_DOMAINS)r[d]=unique(r[d]);r.tags=unique(TAKE_SEMANTIC_DOMAINS.flatMap(d=>r[d])).slice(0,16).map(x=>x.id);return r}
-export function withTakeSemantics(t){return t?.semantic?.schemaVersion===1?t:{...t,semantic:projectTakeSemantics(t)}}export const migrateTakeSemantics=(takes=[])=>takes.map(withTakeSemantics);const wanted=x=>new Set((Array.isArray(x)?x:[x]).map(normalizeCreativeConcept).filter(Boolean));export function scoreTakeSemanticMatch(t,q={}){const s=t?.semantic?.schemaVersion===1?t.semantic:projectTakeSemantics(t);let matched=0,requested=0;for(const d of TAKE_SEMANTIC_DOMAINS){if(q[d]===undefined)continue;const ids=wanted(q[d]),present=new Set((s[d]||[]).map(x=>x.id));requested+=ids.size;for(const id of ids)if(present.has(id))matched++}return {matched,requested,score:requested?matched/requested:0}}export const findTakesBySemantic=(takes=[],q={})=>takes.filter(t=>{const r=scoreTakeSemanticMatch(t,q);return r.requested>0&&r.matched===r.requested});export function compareTakeSemantics(a,b){const x=a?.semantic?.schemaVersion===1?a.semantic:projectTakeSemantics(a),y=b?.semantic?.schemaVersion===1?b.semantic:projectTakeSemantics(b),l=new Set(x.tags),r=new Set(y.tags),overlap=[...l].filter(v=>r.has(v)).length,total=new Set([...l,...r]).size;return {overlap,total,score:total?overlap/total:0}}export const takeSemanticsToConcepts=t=>{const s=t?.semantic?.schemaVersion===1?t.semantic:projectTakeSemantics(t);return TAKE_SEMANTIC_DOMAINS.flatMap(domain=>(s[domain]||[]).map(x=>({domain,id:x.id,label:x.label,source:'take-semantic-v1'})))};
+import { STYLE_PACKS } from './style-packs.js';
+import { normalizeStyleMix } from './resolver-v1.js';
+import { normalizeCreativeConcept } from './creative-relationships.js';
+
+export const TAKE_SEMANTIC_SCHEMA_VERSION = 1;
+export const TAKE_SEMANTIC_DOMAINS = Object.freeze(['style','setting','activity','wardrobe','camera','lighting','mood']);
+
+const labelFor=value=>String(value ?? '').trim();
+const entry=(value, extra={})=>{const label=labelFor(value);const id=normalizeCreativeConcept(label);return id ? {id,label,...extra} : null;};
+const unique=values=>{const seen=new Set();return values.filter(value=>value?.id&&!seen.has(value.id)&&(seen.add(value.id),true));};
+const values=value=>Array.isArray(value)?value:[value];
+const add=(target,value,extra)=>{for(const item of values(value)){const next=entry(item,extra);if(next)target.push(next);}};
+
+function snapshotFor(takeOrSnapshot){return takeOrSnapshot?.stateSnapshot||takeOrSnapshot?.snapshot||takeOrSnapshot||{};}
+function tagsFor(semantic){return unique(TAKE_SEMANTIC_DOMAINS.flatMap(domain=>semantic[domain]).map(item=>({id:item.id,label:item.id}))).slice(0,16).map(item=>item.id);}
+
+export function projectTakeSemantics(takeOrSnapshot){
+  const snapshot=snapshotFor(takeOrSnapshot), semantic={schemaVersion:TAKE_SEMANTIC_SCHEMA_VERSION,style:[],setting:[],activity:[],wardrobe:[],camera:[],lighting:[],mood:[],tags:[]};
+  for(const influence of normalizeStyleMix(snapshot.styleMix?.influences,STYLE_PACKS)){
+    const pack=STYLE_PACKS[influence.packId];
+    if(pack)semantic.style.push({id:pack.id,label:pack.name,weight:influence.weight,normalizedWeight:influence.normalizedWeight});
+  }
+  const scene=snapshot.scene||{};
+  add(semantic.setting,scene.id?scene.name||scene.id:null,scene.id?{sceneId:scene.id}:{});
+  add(semantic.setting,scene.location);
+  add(semantic.activity,scene.activity);
+  const wardrobe=snapshot.wardrobe||{};
+  add(semantic.wardrobe,wardrobe.items);
+  for(const [slot,value] of Object.entries(wardrobe.slots||{}))add(semantic.wardrobe,value,{slot});
+  const photo=snapshot.visualSettings?.photography||{};
+  add(semantic.camera,photo.shotType,{kind:'shotType'});add(semantic.camera,photo.lens,{kind:'lens'});add(semantic.camera,photo.angle,{kind:'angle'});
+  const lighting=snapshot.visualSettings?.lighting||{};
+  add(semantic.lighting,lighting.behaviour,{kind:'behaviour'});add(semantic.lighting,lighting.colourTreatment,{kind:'colourTreatment'});
+  const expression=snapshot.visualSettings?.expression||{};
+  add(semantic.mood,expression.expression,{kind:'expression'});add(semantic.mood,scene.mood,{kind:'sceneMood'});
+  for(const domain of TAKE_SEMANTIC_DOMAINS)semantic[domain]=unique(semantic[domain]);
+  semantic.tags=tagsFor(semantic);
+  return semantic;
+}
+
+export function withTakeSemantics(take){if(take?.semantic?.schemaVersion===TAKE_SEMANTIC_SCHEMA_VERSION)return take;return {...take,semantic:projectTakeSemantics(take)};}
+export function migrateTakeSemantics(takes=[]){return takes.map(withTakeSemantics);}
+const queryIds=value=>new Set(values(value).map(normalizeCreativeConcept).filter(Boolean));
+export function scoreTakeSemanticMatch(take,query={}){const semantic=take?.semantic?.schemaVersion===TAKE_SEMANTIC_SCHEMA_VERSION?take.semantic:projectTakeSemantics(take);let matched=0,requested=0;for(const domain of TAKE_SEMANTIC_DOMAINS){if(query[domain]===undefined)continue;const wanted=queryIds(query[domain]);requested+=wanted.size;const present=new Set((semantic[domain]||[]).map(item=>item.id));for(const id of wanted)if(present.has(id))matched++;}return {matched,requested,score:requested?matched/requested:0};}
+export function findTakesBySemantic(takes=[],query={}){return takes.filter(take=>{const result=scoreTakeSemanticMatch(take,query);return result.requested>0&&result.matched===result.requested;});}
+export function compareTakeSemantics(a,b){const left=a?.semantic?.schemaVersion===TAKE_SEMANTIC_SCHEMA_VERSION?a.semantic:projectTakeSemantics(a),right=b?.semantic?.schemaVersion===TAKE_SEMANTIC_SCHEMA_VERSION?b.semantic:projectTakeSemantics(b);const leftTags=new Set(left.tags),rightTags=new Set(right.tags),overlap=[...leftTags].filter(tag=>rightTags.has(tag)).length,total=new Set([...leftTags,...rightTags]).size;return {overlap,total,score:total?overlap/total:0};}
+export function takeSemanticsToConcepts(take,{domains=TAKE_SEMANTIC_DOMAINS}={}){const semantic=take?.semantic?.schemaVersion===TAKE_SEMANTIC_SCHEMA_VERSION?take.semantic:projectTakeSemantics(take),selected=new Set(domains);return TAKE_SEMANTIC_DOMAINS.filter(domain=>selected.has(domain)).flatMap(domain=>(semantic[domain]||[]).map(item=>({domain,id:item.id,label:item.label,source:'take-semantic-v1',takeId:take?.id||null,characterId:take?.characterId||null,provenance:{source:'take-semantic-v1',takeId:take?.id||null,characterId:take?.characterId||null,domain}})));}

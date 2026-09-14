@@ -5,7 +5,9 @@ import {
   addInspirationToProject,
   appendInspirationConcept,
   applyInspirationToStudio,
+  availableTakeSemanticDomains,
   buildInspirationDirection,
+  buildInspirationFromTakeSignals,
   createDefaultInspirationState,
   directionPreviewData,
   normalizeInspirationState,
@@ -22,6 +24,9 @@ import { createCloudStore } from '../cloud-store.js';
 
 const total = weights => Object.values(weights).reduce((sum, value) => sum + value, 0);
 const exampleIdea = 'rainy\nLondon\nquiet\nbookshop\nwarm lighting\ncinematic';
+
+test('From Takes selects only available semantic domains and preserves provenance',()=>{let state=createCharacter(blankState(),{id:'char-a',name:'A'});state={...state,scene:{id:'tokyo',name:'Tokyo',activity:'Street walk'},wardrobe:{items:['Tailored blazer'],slots:{}},visualSettings:{...state.visualSettings,photography:{shotType:'Candid',lens:'35mm',angle:'Eye level'},expression:{expression:'Quiet'}}};state=createTake(state,'street');const take=state.takes[0],before=structuredClone(take),domains=availableTakeSemanticDomains(take);assert.ok(domains.includes('setting'));assert.ok(domains.includes('camera'));assert.ok(!domains.includes('activity')===false);const inspiration=buildInspirationFromTakeSignals(createDefaultInspirationState(),[take],[{takeId:take.id,characterId:'char-a',domain:'setting'},{takeId:take.id,characterId:'char-a',domain:'camera'}]);assert.equal(inspiration.source.type,'takes');assert.equal(inspiration.source.signals.length,2);assert.equal(inspiration.direction,null);assert.ok(inspiration.concepts.every(concept=>['setting','camera'].includes(concept.domain)));assert.ok(inspiration.concepts.every(concept=>concept.provenance[0].takeId===take.id));assert.deepEqual(take,before);});
+test('From Takes deduplicates concepts while retaining each source and leaves Studio state unchanged',()=>{const semantic={schemaVersion:1,style:[],setting:[],activity:[],wardrobe:[],camera:[{id:'35mm',label:'35mm'}],lighting:[],mood:[],tags:['35mm']},takes=[{id:'a',characterId:'char-a',semantic},{id:'b',characterId:'char-b',semantic}],signals=[{takeId:'a',characterId:'char-a',domain:'camera'},{takeId:'b',characterId:'char-b',domain:'camera'}],result=buildInspirationFromTakeSignals(createDefaultInspirationState(),takes,signals);assert.equal(result.concepts.length,1);assert.equal(result.concepts[0].provenance.length,2);assert.deepEqual(result.source.takeIds,['a','b']);});
 
 test('legacy state migrates to a focused Inspiration default', () => {
   const restored = restoreState(JSON.stringify({ character: null, characters: [], takes: [] }));

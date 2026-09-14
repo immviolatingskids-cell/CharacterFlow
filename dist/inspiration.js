@@ -1,6 +1,7 @@
 import { INFLUENCE_DOMAINS, resolveCreativeDirection } from './creative-relationships.js';
 import { normalizeWardrobe } from './assisted-creation.js';
 import { addProjectInspiration } from './project-library.js';
+import {TAKE_SEMANTIC_DOMAINS,takeSemanticsToConcepts,withTakeSemantics} from './take-semantics.js';
 
 export const INSPIRATION_SCHEMA_VERSION = 1;
 export const DEFAULT_INSPIRATION_WEIGHTS = Object.freeze({
@@ -26,7 +27,7 @@ const titleCase = value => String(value || '').replace(/\b\w/g, character => cha
 const unique = values => {
   const seen = new Set();
   return (values || []).filter(value => {
-    const key = String(value).trim().toLowerCase();
+    const key = typeof value==='object'&&value!==null?String(value.id||value.label||value.input||'').trim().toLowerCase():String(value).trim().toLowerCase();
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -98,12 +99,12 @@ export function normalizeInspirationState(inspirationState = {}) {
   const defaults = createDefaultInspirationState();
   const hasConcepts = Array.isArray(inspirationState?.concepts);
   const concepts = unique((hasConcepts ? inspirationState.concepts : parseInspirationConcepts(inspirationState?.rawIdea))
-    .map(value => String(value).replace(/\s+/g, ' ').trim()));
+    .map(value => typeof value==='object'&&value!==null?clone(value):String(value).replace(/\s+/g, ' ').trim()));
   return {
     ...defaults,
     ...inspirationState,
     schemaVersion: INSPIRATION_SCHEMA_VERSION,
-    mode: 'create',
+    mode: inspirationState?.mode==='takes'?'takes':'create',
     rawIdea: String(inspirationState?.rawIdea || ''),
     concepts,
     weights: normalizeInspirationWeights(inspirationState?.weights),
@@ -126,16 +127,20 @@ export function appendInspirationConcept(inspirationState, concept) {
   const current = normalizeInspirationState(inspirationState);
   const added = parseInspirationConcepts(concept);
   const concepts = unique([...current.concepts, ...added]);
-  return { ...current, concepts, rawIdea: concepts.join(', ') };
+  return { ...current, concepts, rawIdea: concepts.map(item=>typeof item==='object'?(item.label||item.id):item).join(', ') };
 }
 
 export function removeInspirationConcept(inspirationState, conceptOrIndex) {
   const current = normalizeInspirationState(inspirationState);
   const concepts = typeof conceptOrIndex === 'number'
     ? current.concepts.filter((_, index) => index !== conceptOrIndex)
-    : current.concepts.filter(value => value.toLowerCase() !== String(conceptOrIndex).toLowerCase());
-  return { ...current, concepts, rawIdea: concepts.join(', ') };
+    : current.concepts.filter(value => String(typeof value==='object'?(value.id||value.label):value).toLowerCase() !== String(conceptOrIndex).toLowerCase());
+  return { ...current, concepts, rawIdea: concepts.map(item=>typeof item==='object'?(item.label||item.id):item).join(', ') };
 }
+
+export const TAKE_SIGNAL_DOMAINS=Object.freeze(['setting','camera','wardrobe','mood','style','lighting','activity']);
+export function availableTakeSemanticDomains(take){const semantic=withTakeSemantics(take)?.semantic;return TAKE_SIGNAL_DOMAINS.filter(domain=>(semantic?.[domain]||[]).length);}
+export function buildInspirationFromTakeSignals(inspirationState,takes=[],signals=[]){const selected=signals.filter(signal=>signal?.takeId&&TAKE_SIGNAL_DOMAINS.includes(signal.domain));const takeById=new Map(takes.map(take=>[take.id,withTakeSemantics(take)]));const concepts=[];const provenance=new Map();for(const signal of selected){const take=takeById.get(signal.takeId);if(!take)continue;for(const concept of takeSemanticsToConcepts(take,{domains:[signal.domain]})){const key=concept.id;if(!provenance.has(key)){provenance.set(key,{...concept,provenance:[concept.provenance]});concepts.push(provenance.get(key));}else provenance.get(key).provenance.push(concept.provenance);}}const current=normalizeInspirationState(inspirationState);return {...current,mode:'create',rawIdea:concepts.map(concept=>concept.label).join(', '),concepts,direction:null,source:{type:'takes',takeIds:[...new Set(selected.map(signal=>signal.takeId))],signals:clone(selected)}};}
 
 export function resetInspirationWeights(inspirationState) {
   return { ...normalizeInspirationState(inspirationState), weights: { ...DEFAULT_INSPIRATION_WEIGHTS } };
