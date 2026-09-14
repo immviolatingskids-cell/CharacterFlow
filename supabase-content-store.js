@@ -1,0 +1,50 @@
+import {STYLE_PACKS} from './style-packs.js';
+
+export const CONTENT_DOMAINS = Object.freeze(['wardrobe','accessories','grooming','motifs','props','activities','locations','mood','visual','occupations','interests','hobbies','scenes','colours','photography','traits']);
+const clone = value => structuredClone(value);
+const slug = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+export function transformContentRows({archetypes=[], domains=[], items=[], influences=[]}={}) {
+  const domainsById = new Map(domains.map(row => [row.id, row.slug]));
+  const itemsById = new Map(items.map(row => [row.id, row]));
+  const packs = {};
+  for (const archetype of archetypes) {
+    const atoms = Object.fromEntries(CONTENT_DOMAINS.slice(0, 9).map(domain => [domain, []]));
+    for (const relation of influences.filter(item => item.archetype_id === archetype.id && item.review_status !== 'rejected')) {
+      const item = itemsById.get(relation.content_item_id); const domain = domainsById.get(item?.domain_id);
+      if (!item || !atoms[domain]) continue;
+      atoms[domain].push({id: item.slug, value: item.label, weight: Number(relation.weight), tags: item.metadata?.tags || [], conflicts: item.metadata?.conflicts || []});
+    }
+    packs[archetype.slug] = {schemaVersion: 1, id: archetype.slug, name: archetype.name, version: 1, description: archetype.description || '', influence: Object.fromEntries(CONTENT_DOMAINS.slice(0, 9).map(domain => [domain, 'medium'])), atoms};
+  }
+  return packs;
+}
+
+export function createSupabaseContentStore({client, signedIn = true, localCatalogue = STYLE_PACKS} = {}) {
+  const fallback = () => clone(localCatalogue);
+  return { async loadCatalogue() {
+    if (!client || !signedIn) return fallback();
+    try {
+      const tables = await Promise.all(['archetypes','content_domains','content_items','archetype_influences'].map(table => client.from(table).select('*')));
+      if (tables.some(result => result.error) || !tables[0].data?.length || !tables[3].data?.length) return fallback();
+      const catalogue = transformContentRows({archetypes: tables[0].data, domains: tables[1].data, items: tables[2].data, influences: tables[3].data});
+      return Object.keys(catalogue).length ? catalogue : fallback();
+    } catch { return fallback(); }
+  }};
+}
+
+export function validateContentImport(payload, {domains=CONTENT_DOMAINS}={}) {
+  const errors = [], seen = new Set(), archetype = payload?.archetype;
+  if (!archetype?.slug || !archetype?.name) errors.push('archetype slug and name are required');
+  const influences = (payload?.influences || []).map((entry, index) => {
+    const normalized = {...entry, slug: slug(entry.slug || entry.item), reviewStatus: entry.reviewStatus || 'pending'};
+    if (!normalized.slug || !normalized.item) errors.push(`influences[${index}] requires item and slug`);
+    if (!domains.includes(normalized.domain)) errors.push(`influences[${index}] has unsupported domain`);
+    if (!Number.isFinite(Number(normalized.weight)) || Number(normalized.weight) < 0 || Number(normalized.weight) > 1.25) errors.push(`influences[${index}] has invalid weight`);
+    if (seen.has(`${normalized.domain}:${normalized.slug}`)) errors.push(`duplicate item: ${normalized.domain}/${normalized.slug}`); else seen.add(`${normalized.domain}:${normalized.slug}`);
+    return {...normalized, weight: Number(normalized.weight), reviewStatus: normalized.reviewStatus === 'approved' ? 'approved' : 'pending'};
+  });
+  return {valid: !errors.length, errors, payload: errors.length ? null : {archetype: {...archetype, slug: slug(archetype.slug)}, influences}};
+}
+
+export function previewApprovedManifest(manifest) { return (manifest?.candidates || []).filter(candidate => candidate.reviewStatus === 'approved').map(candidate => ({archetype: {slug: candidate.stylePackId, name: candidate.stylePackId}, influences: [{domain: candidate.domain || 'occupations', item: candidate.label, slug: slug(candidate.label), weight: Number(candidate.weight || 0), relationshipType: candidate.relationshipType || 'likely', rationale: candidate.rationale || '', reviewStatus: 'approved'}]})); }
