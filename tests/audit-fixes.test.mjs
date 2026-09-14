@@ -37,3 +37,13 @@ test('audited Scenes cards are existing-task controls with mobile hit areas', ()
   assert.match(css, /\.sidenav button\{min-width:44px;min-height:44px\}/);
   assert.match(css, /\.image-action\{min-width:44px!important;min-height:44px!important\}/);
 });
+
+test('annotated controls describe their actual behavior and preserve working states', () => {
+  const html = read('index.html');
+  const app = read('app.js');
+  assert.match(html, /id="userControl"[^>]*aria-label="Edit active character"[\s\S]*?<span>Edit character<\/span>/);
+  assert.doesNotMatch(html, /id="userControl"[\s\S]*?aria-hidden="true">⌄/);
+  assert.match(app, /appearance\.hair\.colour/);
+  assert.match(app, /id="newProjectBtn"/);
+  assert.match(app, /state=createProject\(state/);
+});
