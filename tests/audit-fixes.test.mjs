@@ -61,3 +61,14 @@ test('image prompt surface keeps diagnostics advanced and readable', () => {
   assert.match(app, /Core values/);
   assert.match(app, /Direction in Studio/);
 });
+
+test('layout audit corrections keep prompt, wardrobe, style and stage controls usable', () => {
+  const app = read('app.js');
+  const css = read('styles.css');
+  assert.match(app, /prompt-details/);
+  assert.match(app, /wardrobeClearBtn/);
+  assert.match(app, /Wardrobe fields cleared/);
+  assert.match(app, /pack-examples/);
+  assert.match(app, /editorialNote\(activeTake\?'Character direction captured/);
+  assert.match(css, /\.portrait-frame\{background:transparent!important/);
+});
